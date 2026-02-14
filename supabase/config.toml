@@ -1,1 +1,7 @@
 project_id = "ckngfrlnsqwqxhxtiwkt"
+
+[functions.scrape-product]
+verify_jwt = false
+
+[functions.parse-product]
+verify_jwt = false

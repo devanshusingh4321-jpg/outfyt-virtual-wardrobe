@@ -14,6 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
+      clothing_items: {
+        Row: {
+          brand: string | null
+          category: string | null
+          colors: Json | null
+          created_at: string
+          fit_score: number | null
+          id: string
+          image_url: string | null
+          metadata: Json | null
+          name: string
+          price: string | null
+          product_url: string | null
+          selected_color: string | null
+          selected_size: string | null
+          size_chart: Json | null
+          sizes: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand?: string | null
+          category?: string | null
+          colors?: Json | null
+          created_at?: string
+          fit_score?: number | null
+          id?: string
+          image_url?: string | null
+          metadata?: Json | null
+          name: string
+          price?: string | null
+          product_url?: string | null
+          selected_color?: string | null
+          selected_size?: string | null
+          size_chart?: Json | null
+          sizes?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand?: string | null
+          category?: string | null
+          colors?: Json | null
+          created_at?: string
+          fit_score?: number | null
+          id?: string
+          image_url?: string | null
+          metadata?: Json | null
+          name?: string
+          price?: string | null
+          product_url?: string | null
+          selected_color?: string | null
+          selected_size?: string | null
+          size_chart?: Json | null
+          sizes?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      outfit_items: {
+        Row: {
+          clothing_item_id: string
+          id: string
+          layer_order: number
+          outfit_id: string
+        }
+        Insert: {
+          clothing_item_id: string
+          id?: string
+          layer_order?: number
+          outfit_id: string
+        }
+        Update: {
+          clothing_item_id?: string
+          id?: string
+          layer_order?: number
+          outfit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outfit_items_clothing_item_id_fkey"
+            columns: ["clothing_item_id"]
+            isOneToOne: false
+            referencedRelation: "clothing_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outfit_items_outfit_id_fkey"
+            columns: ["outfit_id"]
+            isOneToOne: false
+            referencedRelation: "outfits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outfits: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           chest: number | null
@@ -58,7 +178,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      owns_outfit: { Args: { _outfit_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

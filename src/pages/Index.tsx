@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link, Shirt, Sparkles, Eye, ArrowRight, Zap, Layers, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const steps = [
   {
@@ -40,6 +41,8 @@ const fadeUp = {
 };
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
       {/* Nav */}
@@ -49,10 +52,10 @@ const Index = () => {
             OUTFYT
           </span>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={() => navigate("/auth")}>
               Log in
             </Button>
-            <Button size="sm" className="glow-purple bg-primary hover:bg-primary/90 font-display">
+            <Button size="sm" className="glow-purple bg-primary hover:bg-primary/90 font-display" onClick={() => navigate("/auth")}>
               Get Started
             </Button>
           </div>
@@ -102,7 +105,7 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.45 }}
           >
-            <Button size="lg" className="glow-purple bg-primary hover:bg-primary/90 font-display text-base px-8 h-12 gap-2">
+            <Button size="lg" className="glow-purple bg-primary hover:bg-primary/90 font-display text-base px-8 h-12 gap-2" onClick={() => navigate("/auth")}>
               Start Building <ArrowRight className="w-4 h-4" />
             </Button>
             <Button variant="outline" size="lg" className="font-display text-base px-8 h-12 border-border/50 hover:bg-surface-hover">
@@ -213,7 +216,7 @@ const Index = () => {
             <p className="text-muted-foreground mb-8 relative z-10">
               Join the future of fashion. No more guessing sizes. No more returns.
             </p>
-            <Button size="lg" className="glow-purple bg-primary hover:bg-primary/90 font-display text-base px-10 h-12 gap-2 relative z-10">
+            <Button size="lg" className="glow-purple bg-primary hover:bg-primary/90 font-display text-base px-10 h-12 gap-2 relative z-10" onClick={() => navigate("/auth")}>
               Get Started Free <Sparkles className="w-4 h-4" />
             </Button>
           </motion.div>

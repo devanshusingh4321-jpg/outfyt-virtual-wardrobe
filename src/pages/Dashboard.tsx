@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Link2, Ruler, Shirt, ChevronRight } from "lucide-react";
+import { LogOut, Ruler, Shirt, Plus, Layers } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
+  const [outfits, setOutfits] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -19,6 +20,13 @@ const Dashboard = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .then(({ data }) => setItems(data || []));
+
+    supabase
+      .from("outfits")
+      .select("*, outfit_items(clothing_item_id)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setOutfits(data || []));
   }, [user]);
 
   if (loading) return null;
@@ -51,6 +59,40 @@ const Dashboard = () => {
 
         {/* Add Product Section */}
         <AddProduct />
+
+        {/* Outfits Section */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+              <Layers className="w-5 h-5 text-accent" />
+              Your Outfits ({outfits.length})
+            </h2>
+            <Button onClick={() => navigate("/outfit/new")} size="sm" className="glow-purple bg-primary hover:bg-primary/90 font-display gap-1.5">
+              <Plus className="w-4 h-4" /> New Outfit
+            </Button>
+          </div>
+          {outfits.length === 0 ? (
+            <div className="glass rounded-2xl p-8 text-center">
+              <Layers className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No outfits yet. Create one to mix and match your pieces!</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {outfits.map((outfit) => (
+                <button
+                  key={outfit.id}
+                  onClick={() => navigate(`/outfit/${outfit.id}`)}
+                  className="glass rounded-xl p-5 text-left hover:border-primary/50 transition-colors group"
+                >
+                  <h3 className="font-display font-semibold group-hover:text-primary transition-colors">{outfit.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {outfit.outfit_items?.length || 0} pieces
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Saved Items */}
         {items.length > 0 && (

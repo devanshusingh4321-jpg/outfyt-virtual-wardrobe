@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import StyleSuggestions from "@/components/StyleSuggestions";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -373,6 +374,11 @@ const OutfitBuilder = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* AI Styling Suggestions */}
+        {outfitItems.length > 0 && (
+          <StyleSuggestions outfitItems={outfitItems} />
+        )}
 
         {/* Total Cost */}
         {outfitItems.length > 0 && (

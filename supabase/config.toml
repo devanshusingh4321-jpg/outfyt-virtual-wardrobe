@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.parse-product]
 verify_jwt = false
+
+[functions.style-suggestions]
+verify_jwt = false

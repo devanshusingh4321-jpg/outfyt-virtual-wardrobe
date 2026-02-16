@@ -43,6 +43,8 @@ Deno.serve(async (req) => {
         url: formattedUrl,
         formats: ['markdown', 'links'],
         onlyMainContent: true,
+        timeout: 60000,
+        waitFor: 5000,
       }),
     });
 

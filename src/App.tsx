@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Measurements from "./pages/Measurements";
 import OutfitBuilder from "./pages/OutfitBuilder";
+import TryOn from "./pages/TryOn";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/measurements" element={<Measurements />} />
             <Route path="/outfit/new" element={<OutfitBuilder />} />
             <Route path="/outfit/:outfitId" element={<OutfitBuilder />} />
+            <Route path="/try-on" element={<TryOn />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

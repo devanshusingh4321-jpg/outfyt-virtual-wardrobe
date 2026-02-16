@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, Ruler, Shirt, Plus, Layers } from "lucide-react";
+import { LogOut, Ruler, Shirt, Plus, Layers, Eye } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +39,9 @@ const Dashboard = () => {
         <div className="container flex items-center justify-between h-16">
           <a href="/" className="font-display text-xl font-bold text-gradient">OUTFYT</a>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/try-on")} className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Eye className="w-4 h-4" /> Try-On
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/measurements")} className="gap-1.5 text-muted-foreground hover:text-foreground">
               <Ruler className="w-4 h-4" /> Measurements
             </Button>

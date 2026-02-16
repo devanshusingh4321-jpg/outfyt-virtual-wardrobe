@@ -8,7 +8,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Upload, Camera, Shirt, Layers, Sparkles, X, Eye
+  ArrowLeft, Upload, Camera, Shirt, Layers, Sparkles, X, Eye, Loader2
 } from "lucide-react";
 import {
   Select,
@@ -48,6 +48,7 @@ const TryOn = () => {
   const [sizeSimulation, setSizeSimulation] = useState("M");
   const [showOverlay, setShowOverlay] = useState(false);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   // Load outfits with their items
   useEffect(() => {
@@ -115,22 +116,43 @@ const TryOn = () => {
     }
   };
 
-  const generateOverlay = () => {
+  const generateOverlay = async () => {
     if (!photo || !selectedOutfit) return;
-    // Reset and re-trigger to force AnimatePresence re-render
+    setGenerating(true);
     setShowOverlay(false);
-    setTimeout(() => {
-      setCompositeUrl(photo);
-      setShowOverlay(true);
-    }, 50);
-  };
+    setCompositeUrl(null);
 
-  // Auto-regenerate when outfit or size changes while overlay is showing
-  useEffect(() => {
-    if (showOverlay && photo && selectedOutfit) {
-      setCompositeUrl(photo);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-tryon', {
+        body: {
+          photoUrl: photo,
+          outfitItems: selectedOutfit.items.map(i => ({
+            name: i.name,
+            brand: i.brand,
+            image_url: i.image_url,
+            category: i.category,
+          })),
+          size: sizeSimulation,
+        },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Generation failed');
+
+      const resultUrl = data.imageUrl || data.imageBase64;
+      if (resultUrl) {
+        setCompositeUrl(resultUrl);
+        setShowOverlay(true);
+        toast({ title: "Try-on generated! ✨" });
+      } else {
+        throw new Error('No image returned');
+      }
+    } catch (err: any) {
+      toast({ title: "Generation failed", description: err.message, variant: "destructive" });
+    } finally {
+      setGenerating(false);
     }
-  }, [selectedOutfit, sizeSimulation]);
+  };
 
   // Size scale factor for simulation
   const sizeScale: Record<string, number> = {
@@ -297,10 +319,14 @@ const TryOn = () => {
         {/* Generate Try-On */}
         <Button
           onClick={generateOverlay}
-          disabled={!photo || !selectedOutfit}
+          disabled={!photo || !selectedOutfit || generating}
           className="w-full h-14 glow-purple bg-primary hover:bg-primary/90 font-display text-base gap-2"
         >
-          <Eye className="w-5 h-5" /> Generate Try-On Preview
+          {generating ? (
+            <><Loader2 className="w-5 h-5 animate-spin" /> Generating AI Try-On...</>
+          ) : (
+            <><Eye className="w-5 h-5" /> Generate Try-On Preview</>
+          )}
         </Button>
 
         {/* Result: Overlay + Slider */}

@@ -117,11 +117,20 @@ const TryOn = () => {
 
   const generateOverlay = () => {
     if (!photo || !selectedOutfit) return;
-    // MVP: composite is the photo with outfit items shown alongside
-    // Architecture ready for AI try-on API integration
-    setShowOverlay(true);
-    setCompositeUrl(photo); // In MVP, "after" shows the same photo with overlay items
+    // Reset and re-trigger to force AnimatePresence re-render
+    setShowOverlay(false);
+    setTimeout(() => {
+      setCompositeUrl(photo);
+      setShowOverlay(true);
+    }, 50);
   };
+
+  // Auto-regenerate when outfit or size changes while overlay is showing
+  useEffect(() => {
+    if (showOverlay && photo && selectedOutfit) {
+      setCompositeUrl(photo);
+    }
+  }, [selectedOutfit, sizeSimulation]);
 
   // Size scale factor for simulation
   const sizeScale: Record<string, number> = {
@@ -208,7 +217,7 @@ const TryOn = () => {
               {outfits.map((outfit) => (
                 <button
                   key={outfit.id}
-                  onClick={() => { setSelectedOutfit(outfit); setShowOverlay(false); }}
+                  onClick={() => setSelectedOutfit(outfit)}
                   className={`rounded-xl p-4 text-left transition-all border ${
                     selectedOutfit?.id === outfit.id
                       ? "border-primary bg-primary/10 glow-purple"

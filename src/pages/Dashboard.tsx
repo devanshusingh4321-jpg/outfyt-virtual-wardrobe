@@ -42,6 +42,9 @@ const Dashboard = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate("/try-on")} className="gap-1.5 text-muted-foreground hover:text-foreground">
               <Eye className="w-4 h-4" /> Try-On
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/closet")} className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Shirt className="w-4 h-4" /> Closet
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/measurements")} className="gap-1.5 text-muted-foreground hover:text-foreground">
               <Ruler className="w-4 h-4" /> Measurements
             </Button>

@@ -6,12 +6,14 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import StyleSuggestions from "@/components/StyleSuggestions";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Plus, Trash2, Save, Shirt, Footprints,
-  Wind, Crown, Layers, GripVertical, ShoppingBag, Edit2, Check, X
+  Wind, Crown, Layers, GripVertical, ShoppingBag, Edit2, Check, X,
+  Download, Share2, Link2, Copy
 } from "lucide-react";
+import { toPng } from "html-to-image";
 
 type ClothingItem = {
   id: string;
@@ -47,6 +49,7 @@ const OutfitBuilder = () => {
   const [saving, setSaving] = useState(false);
   const [showCloset, setShowCloset] = useState(false);
   const [filterZone, setFilterZone] = useState<BodyZone | "all">("all");
+  const outfitCardRef = useRef<HTMLDivElement>(null);
 
   // Load user closet items
   useEffect(() => {
@@ -161,6 +164,31 @@ const OutfitBuilder = () => {
     (a, b) => (ZONE_CONFIG[a as BodyZone]?.order ?? 99) - (ZONE_CONFIG[b as BodyZone]?.order ?? 99)
   );
 
+  const downloadOutfitImage = async () => {
+    if (!outfitCardRef.current) return;
+    try {
+      const dataUrl = await toPng(outfitCardRef.current, { backgroundColor: '#0E0E10', pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.download = `${outfitName.replace(/\s+/g, '-').toLowerCase()}-outfit.png`;
+      link.href = dataUrl;
+      link.click();
+      toast({ title: "Outfit image downloaded! 📸" });
+    } catch {
+      toast({ title: "Failed to download", variant: "destructive" });
+    }
+  };
+
+  const copyShareLink = () => {
+    if (!outfitId) {
+      toast({ title: "Save the outfit first to get a share link", variant: "destructive" });
+      return;
+    }
+    const url = `${window.location.origin}/outfit/${outfitId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast({ title: "Link copied to clipboard! 🔗" });
+    });
+  };
+
   const filteredCloset =
     filterZone === "all" ? closetItems : closetItems.filter((i) => i.category === filterZone);
 
@@ -211,8 +239,8 @@ const OutfitBuilder = () => {
           )}
         </div>
 
-        {/* Body Zone Layers */}
-        <div className="space-y-4">
+        {/* Body Zone Layers — wrapped for screenshot */}
+        <div ref={outfitCardRef} className="space-y-4">
           {outfitItems.length === 0 ? (
             <div className="glass rounded-2xl p-12 text-center">
               <ShoppingBag className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
@@ -399,6 +427,26 @@ const OutfitBuilder = () => {
                 })()}
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Download & Share */}
+        {outfitItems.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={downloadOutfitImage}
+              variant="outline"
+              className="gap-2 font-display"
+            >
+              <Download className="w-4 h-4" /> Download as PNG
+            </Button>
+            <Button
+              onClick={copyShareLink}
+              variant="outline"
+              className="gap-2 font-display"
+            >
+              <Link2 className="w-4 h-4" /> Copy Share Link
+            </Button>
           </div>
         )}
       </div>

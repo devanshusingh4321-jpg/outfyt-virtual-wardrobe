@@ -76,29 +76,11 @@ Deno.serve(async (req) => {
 
     console.log('Generating try-on with', itemImages.length, 'item images, size:', size);
 
-    // Build the parts array for Gemini multimodal request
-    const parts: any[] = [
+    // Build content array for chat completions API
+    const userContent: any[] = [
       {
-        inlineData: {
-          mimeType: photoMime,
-          data: photoBase64,
-        }
-      },
-    ];
-
-    // Add outfit item images
-    for (const img of itemImages) {
-      parts.push({
-        inlineData: {
-          mimeType: img.mime,
-          data: img.base64,
-        }
-      });
-    }
-
-    // Add the text prompt
-    parts.push({
-      text: `You are a virtual try-on assistant. The first image is a photo of a person. The subsequent images are clothing items: ${outfitDescription}.
+        type: 'text',
+        text: `You are a virtual try-on assistant. The first image is a photo of a person. The subsequent images are clothing items: ${outfitDescription}.
 
 Create a realistic image of this SAME person wearing these exact clothing items. The clothing should fit in a ${sizeNote} style (size ${size}).
 
@@ -108,11 +90,24 @@ CRITICAL RULES:
 - Make the clothing look natural and properly fitted on their body
 - Maintain realistic lighting, shadows, and proportions
 - The result should look like a real photo, not a collage`
-    });
+      },
+      {
+        type: 'image_url',
+        image_url: { url: `data:${photoMime};base64,${photoBase64}` }
+      },
+    ];
 
-    // Call Gemini image generation model
+    // Add outfit item images
+    for (const img of itemImages) {
+      userContent.push({
+        type: 'image_url',
+        image_url: { url: `data:${img.mime};base64,${img.base64}` }
+      });
+    }
+
+    // Call Lovable AI Gateway
     const geminiResponse = await fetch(
-      'https://aigateway.lovable.dev/v1beta/models/gemini-3-pro-image-preview:generateContent',
+      'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
         method: 'POST',
         headers: {
@@ -120,18 +115,28 @@ CRITICAL RULES:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [{ parts }],
-          generationConfig: {
-            responseModalities: ['IMAGE', 'TEXT'],
-            imageMimeType: 'image/jpeg',
-          },
+          model: 'google/gemini-3-pro-image-preview',
+          messages: [{ role: 'user', content: userContent }],
+          modalities: ['image', 'text'],
         }),
       }
     );
 
     if (!geminiResponse.ok) {
       const errText = await geminiResponse.text();
-      console.error('Gemini error:', errText);
+      console.error('AI gateway error:', geminiResponse.status, errText);
+      if (geminiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Rate limit exceeded, please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (geminiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'AI credits exhausted. Please add funds.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       return new Response(
         JSON.stringify({ success: false, error: `AI generation failed: ${geminiResponse.status}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -139,25 +144,22 @@ CRITICAL RULES:
     }
 
     const geminiData = await geminiResponse.json();
-    console.log('Gemini response received');
+    console.log('AI response received');
 
-    // Extract the generated image
-    const candidates = geminiData.candidates || [];
+    // Extract the generated image from chat completions response
+    const images = geminiData.choices?.[0]?.message?.images;
     let generatedImageBase64: string | null = null;
 
-    for (const candidate of candidates) {
-      const candidateParts = candidate.content?.parts || [];
-      for (const part of candidateParts) {
-        if (part.inlineData?.data) {
-          generatedImageBase64 = part.inlineData.data;
-          break;
-        }
+    if (images && images.length > 0) {
+      const imageUrl = images[0]?.image_url?.url;
+      if (imageUrl && imageUrl.startsWith('data:')) {
+        // Extract base64 from data URI
+        generatedImageBase64 = imageUrl.split(',')[1] || null;
       }
-      if (generatedImageBase64) break;
     }
 
     if (!generatedImageBase64) {
-      console.error('No image in Gemini response:', JSON.stringify(geminiData).substring(0, 500));
+      console.error('No image in AI response:', JSON.stringify(geminiData).substring(0, 500));
       return new Response(
         JSON.stringify({ success: false, error: 'AI did not generate an image. Try with a different photo.' }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

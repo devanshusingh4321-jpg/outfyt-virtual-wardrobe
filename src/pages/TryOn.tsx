@@ -8,7 +8,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Upload, Camera, Shirt, Layers, Sparkles, X, Eye, Loader2
+  ArrowLeft, Upload, Camera, Shirt, Layers, Sparkles, X, Eye, Loader2, Save, Check
 } from "lucide-react";
 import {
   Select,
@@ -54,6 +54,8 @@ const TryOn = () => {
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [colorOverrides, setColorOverrides] = useState<ColorOverrides>({});
+  const [savingTryon, setSavingTryon] = useState(false);
+  const [tryonSaved, setTryonSaved] = useState(false);
 
   // Load outfits with their items
   useEffect(() => {
@@ -126,6 +128,7 @@ const TryOn = () => {
     setGenerating(true);
     setShowOverlay(false);
     setCompositeUrl(null);
+    setTryonSaved(false);
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-tryon', {
@@ -159,8 +162,28 @@ const TryOn = () => {
       setGenerating(false);
     }
   };
+  const saveTryonPhoto = async () => {
+    if (!compositeUrl || !user || !selectedOutfit) return;
+    setSavingTryon(true);
+    try {
+      const { error } = await supabase.from("tryon_photos" as any).insert({
+        user_id: user.id,
+        image_url: compositeUrl,
+        outfit_id: selectedOutfit.id,
+        outfit_name: selectedOutfit.name,
+        size: sizeSimulation,
+      });
+      if (error) throw error;
+      setTryonSaved(true);
+      toast({ title: "Try-on saved to your closet! 💾" });
+    } catch (err: any) {
+      toast({ title: "Failed to save", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingTryon(false);
+    }
+  };
 
-  // Size scale factor for simulation
+
   const sizeScale: Record<string, number> = {
     XS: 0.85, S: 0.92, M: 1, L: 1.08, XL: 1.15, XXL: 1.22,
   };
@@ -389,6 +412,21 @@ const TryOn = () => {
                   beforeLabel="You"
                   afterLabel={`You + ${selectedOutfit.name}`}
                 />
+                {/* Save Try-On Button */}
+                <Button
+                  onClick={saveTryonPhoto}
+                  disabled={savingTryon || tryonSaved}
+                  variant={tryonSaved ? "secondary" : "default"}
+                  className="w-full gap-2 font-display"
+                >
+                  {tryonSaved ? (
+                    <><Check className="w-4 h-4" /> Saved to Closet</>
+                  ) : savingTryon ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+                  ) : (
+                    <><Save className="w-4 h-4" /> Save Try-On to Closet</>
+                  )}
+                </Button>
               </div>
 
               {/* Outfit Items Overlay Grid */}

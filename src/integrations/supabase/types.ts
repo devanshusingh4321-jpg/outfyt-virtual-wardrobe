@@ -173,6 +173,44 @@ export type Database = {
         }
         Relationships: []
       }
+      tryon_photos: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          outfit_id: string | null
+          outfit_name: string | null
+          size: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          outfit_id?: string | null
+          outfit_name?: string | null
+          size?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          outfit_id?: string | null
+          outfit_name?: string | null
+          size?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tryon_photos_outfit_id_fkey"
+            columns: ["outfit_id"]
+            isOneToOne: false
+            referencedRelation: "outfits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Shirt, Layers, Footprints, Wind, Crown,
-  Trash2, Search, Grid3X3, LayoutList, ExternalLink
+  Trash2, Search, Grid3X3, LayoutList, ExternalLink, Eye
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -51,10 +51,12 @@ const Closet = () => {
   const navigate = useNavigate();
 
   const [items, setItems] = useState<ClothingItem[]>([]);
+  const [tryonPhotos, setTryonPhotos] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [deleteTarget, setDeleteTarget] = useState<ClothingItem | null>(null);
+  const [deletingTryon, setDeletingTryon] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -64,7 +66,25 @@ const Closet = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .then(({ data }) => setItems((data as ClothingItem[]) || []));
+
+    supabase
+      .from("tryon_photos" as any)
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }: any) => setTryonPhotos(data || []));
   }, [user]);
+
+  const deleteTryonPhoto = async (id: string) => {
+    const { error } = await supabase.from("tryon_photos" as any).delete().eq("id", id);
+    if (error) {
+      toast({ title: "Failed to delete", description: error.message, variant: "destructive" });
+    } else {
+      setTryonPhotos((prev) => prev.filter((p: any) => p.id !== id));
+      toast({ title: "Try-on photo removed" });
+    }
+    setDeletingTryon(null);
+  };
 
   const deleteItem = async () => {
     if (!deleteTarget) return;
@@ -282,6 +302,44 @@ const Closet = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Try-On Photos Section */}
+        {tryonPhotos.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+              <Eye className="w-5 h-5 text-primary" /> Saved Try-Ons ({tryonPhotos.length})
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {tryonPhotos.map((tp: any) => (
+                <div key={tp.id} className="glass rounded-xl overflow-hidden group relative">
+                  <div className="aspect-[3/4] bg-secondary/30 overflow-hidden">
+                    <img
+                      src={tp.image_url}
+                      alt={tp.outfit_name || "Try-on"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <p className="text-sm font-medium truncate">{tp.outfit_name || "Try-on"}</p>
+                    <div className="flex items-center gap-2">
+                      {tp.size && <Badge variant="secondary" className="text-[9px]">Size {tp.size}</Badge>}
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(tp.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => deleteTryonPhoto(tp.id)}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

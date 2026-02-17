@@ -3,6 +3,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 8192;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+    for (let j = 0; j < chunk.length; j++) {
+      binary += String.fromCharCode(chunk[j]);
+    }
+  }
+  return btoa(binary);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -31,7 +44,7 @@ Deno.serve(async (req) => {
     const photoResponse = await fetch(photoUrl);
     if (!photoResponse.ok) throw new Error('Failed to fetch user photo');
     const photoBuffer = await photoResponse.arrayBuffer();
-    const photoBase64 = btoa(String.fromCharCode(...new Uint8Array(photoBuffer)));
+    const photoBase64 = arrayBufferToBase64(photoBuffer);
     const photoMime = photoResponse.headers.get('content-type') || 'image/jpeg';
 
     // Fetch outfit item images as base64
@@ -47,7 +60,7 @@ Deno.serve(async (req) => {
           const imgRes = await fetch(item.image_url);
           if (imgRes.ok) {
             const imgBuf = await imgRes.arrayBuffer();
-            const imgBase64 = btoa(String.fromCharCode(...new Uint8Array(imgBuf)));
+            const imgBase64 = arrayBufferToBase64(imgBuf);
             const imgMime = imgRes.headers.get('content-type') || 'image/jpeg';
             itemImages.push({ base64: imgBase64, mime: imgMime });
           }

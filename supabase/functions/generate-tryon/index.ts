@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
     for (const item of outfitItems) {
       itemDescriptions.push(
-        `${item.brand ? item.brand + ' ' : ''}${item.name}${item.category ? ' (' + item.category + ')' : ''}`
+        `${item.brand ? item.brand + ' ' : ''}${item.name}${item.category ? ' (' + item.category + ')' : ''}${item.color ? ' in ' + item.color : ''}`
       );
       if (item.image_url) {
         try {

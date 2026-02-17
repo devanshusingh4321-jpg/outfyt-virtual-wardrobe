@@ -25,6 +25,7 @@ type ClothingItem = {
   image_url: string | null;
   category: string | null;
   price: string | null;
+  colors: string[] | null;
 };
 
 type Outfit = {
@@ -34,6 +35,9 @@ type Outfit = {
 };
 
 const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL"] as const;
+
+// Track per-item color overrides
+type ColorOverrides = Record<string, string>;
 
 const TryOn = () => {
   const { user, loading } = useAuth();
@@ -49,6 +53,7 @@ const TryOn = () => {
   const [showOverlay, setShowOverlay] = useState(false);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [colorOverrides, setColorOverrides] = useState<ColorOverrides>({});
 
   // Load outfits with their items
   useEffect(() => {
@@ -72,9 +77,9 @@ const TryOn = () => {
           const ids = oi.map((i) => i.clothing_item_id);
           const { data: clothes } = await supabase
             .from("clothing_items")
-            .select("id, name, brand, image_url, category, price")
+            .select("id, name, brand, image_url, category, price, colors")
             .in("id", ids);
-          loaded.push({ ...o, items: clothes || [] });
+          loaded.push({ ...o, items: (clothes || []) as ClothingItem[] });
         } else {
           loaded.push({ ...o, items: [] });
         }
@@ -131,6 +136,7 @@ const TryOn = () => {
             brand: i.brand,
             image_url: i.image_url,
             category: i.category,
+            color: colorOverrides[i.id] || (i.colors && i.colors.length > 0 ? i.colors[0] : null),
           })),
           size: sizeSimulation,
         },
@@ -239,7 +245,7 @@ const TryOn = () => {
               {outfits.map((outfit) => (
                 <button
                   key={outfit.id}
-                  onClick={() => setSelectedOutfit(outfit)}
+                  onClick={() => { setSelectedOutfit(outfit); setColorOverrides({}); }}
                   className={`rounded-xl p-4 text-left transition-all border ${
                     selectedOutfit?.id === outfit.id
                       ? "border-primary bg-primary/10 glow-purple"
@@ -276,6 +282,40 @@ const TryOn = () => {
             </div>
           )}
         </div>
+
+        {/* Step 2.5: Color Selection */}
+        {selectedOutfit && selectedOutfit.items.some(i => i.colors && i.colors.length > 1) && (
+          <div className="glass rounded-2xl p-6 space-y-4">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Shirt className="w-4 h-4 text-primary" /> Choose Colors
+            </h2>
+            <div className="space-y-3">
+              {selectedOutfit.items.filter(i => i.colors && i.colors.length > 0).map((item) => (
+                <div key={item.id} className="flex items-center gap-3">
+                  <span className="text-sm font-medium truncate min-w-[120px] max-w-[180px]">{item.name}</span>
+                  <div className="flex gap-2 flex-wrap">
+                    {(item.colors || []).map((color) => {
+                      const isSelected = (colorOverrides[item.id] || (item.colors && item.colors[0])) === color;
+                      return (
+                        <button
+                          key={color}
+                          onClick={() => setColorOverrides(prev => ({ ...prev, [item.id]: color }))}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all border ${
+                            isSelected
+                              ? "border-primary bg-primary/15 text-primary"
+                              : "border-border/50 bg-secondary/30 text-muted-foreground hover:border-primary/50"
+                          }`}
+                        >
+                          {color}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Step 3: Size Simulation */}
         <div className="glass rounded-2xl p-6 space-y-4">

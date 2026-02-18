@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Plus, Trash2, Save, Shirt, Footprints,
   Wind, Crown, Layers, GripVertical, ShoppingBag, Edit2, Check, X,
-  Download, Share2, Link2, Copy
+  Download, Share2, Link2, Copy, ShoppingCart, ExternalLink
 } from "lucide-react";
 import { toPng } from "html-to-image";
 
@@ -22,6 +22,7 @@ type ClothingItem = {
   image_url: string | null;
   category: string | null;
   price: string | null;
+  product_url: string | null;
   selected_color: string | null;
   selected_size: string | null;
 };
@@ -56,10 +57,10 @@ const OutfitBuilder = () => {
     if (!user) return;
     supabase
       .from("clothing_items")
-      .select("id, name, brand, image_url, category, price, selected_color, selected_size")
+      .select("id, name, brand, image_url, category, price, product_url, selected_color, selected_size")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .then(({ data }) => setClosetItems(data || []));
+      .then(({ data }) => setClosetItems((data as ClothingItem[]) || []));
   }, [user]);
 
   // Load existing outfit if editing
@@ -83,7 +84,7 @@ const OutfitBuilder = () => {
         const itemIds = items.map((i) => i.clothing_item_id);
         const { data: clothing } = await supabase
           .from("clothing_items")
-          .select("id, name, brand, image_url, category, price, selected_color, selected_size")
+          .select("id, name, brand, image_url, category, price, product_url, selected_color, selected_size")
           .in("id", itemIds);
 
         if (clothing) {
@@ -282,12 +283,28 @@ const OutfitBuilder = () => {
                               <Shirt className="w-8 h-8 text-muted-foreground" />
                             </div>
                           )}
-                          <div className="p-2">
+                          <div className="p-2 space-y-1.5">
                             {item.brand && (
                               <span className="text-[9px] font-medium uppercase tracking-wider text-primary">{item.brand}</span>
                             )}
                             <p className="text-xs font-medium truncate">{item.name}</p>
-                            {item.price && <p className="text-[10px] text-muted-foreground">{item.price}</p>}
+                            <div className="flex items-center justify-between gap-1">
+                              {item.price && item.price !== "null" ? (
+                                <span className="text-[10px] font-semibold text-foreground">{item.price}</span>
+                              ) : <span />}
+                              {item.product_url && (
+                                <a
+                                  href={item.product_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="flex items-center gap-0.5 text-[9px] font-semibold text-primary hover:text-primary/80 transition-colors shrink-0"
+                                  title="Buy this item"
+                                >
+                                  <ShoppingCart className="w-2.5 h-2.5" /> Buy
+                                </a>
+                              )}
+                            </div>
                           </div>
                           <button
                             onClick={() => removeItem(item.id)}
@@ -408,24 +425,71 @@ const OutfitBuilder = () => {
           <StyleSuggestions outfitItems={outfitItems} />
         )}
 
-        {/* Total Cost */}
+        {/* Total Cost & Buy All */}
         {outfitItems.length > 0 && (
-          <div className="glass rounded-2xl p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Outfit Summary</p>
-              <p className="font-display text-lg font-semibold mt-1">{outfitItems.length} pieces</p>
+          <div className="glass rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Outfit Summary</p>
+                <p className="font-display text-lg font-semibold mt-1">{outfitItems.length} {outfitItems.length === 1 ? "piece" : "pieces"}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Cost</p>
+                <p className="font-display text-lg font-bold text-primary mt-1">
+                  {(() => {
+                    const total = outfitItems.reduce((sum, item) => {
+                      const num = parseFloat((item.price || "").replace(/[^0-9.]/g, ""));
+                      return sum + (isNaN(num) ? 0 : num);
+                    }, 0);
+                    return total > 0 ? `$${total.toFixed(2)}` : "—";
+                  })()}
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Cost</p>
-              <p className="font-display text-lg font-bold text-primary mt-1">
-                {(() => {
-                  const total = outfitItems.reduce((sum, item) => {
-                    const num = parseFloat((item.price || "").replace(/[^0-9.]/g, ""));
-                    return sum + (isNaN(num) ? 0 : num);
-                  }, 0);
-                  return total > 0 ? `$${total.toFixed(2)}` : "—";
-                })()}
+
+            {/* Per-item buy links */}
+            <div className="border-t border-border/30 pt-4 space-y-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <ShoppingCart className="w-3.5 h-3.5" /> Purchase Items
               </p>
+              <div className="space-y-2">
+                {outfitItems.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-3 py-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {item.image_url && (
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="w-8 h-8 rounded-md object-contain bg-secondary/30 shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{item.name}</p>
+                        {item.brand && <p className="text-[9px] text-primary uppercase tracking-wider">{item.brand}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {item.price && item.price !== "null" && (
+                        <span className="text-sm font-semibold">{item.price}</span>
+                      )}
+                      {item.product_url ? (
+                        <a
+                          href={item.product_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button size="sm" className="h-7 text-xs gap-1.5 bg-primary hover:bg-primary/90 font-display">
+                            <ShoppingCart className="w-3 h-3" /> Buy
+                          </Button>
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground italic">No link</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

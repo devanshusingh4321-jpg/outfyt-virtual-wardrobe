@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Shirt, Layers, Footprints, Wind, Crown,
-  Trash2, Search, Grid3X3, LayoutList, ExternalLink, Eye
+  Trash2, Search, Grid3X3, LayoutList, ExternalLink, Eye, ShoppingCart
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -240,19 +240,20 @@ const Closet = () => {
                       </div>
                     )}
                   </div>
+                  {/* Buy button — always visible if product_url exists */}
+                  {item.product_url && (
+                    <a
+                      href={item.product_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute bottom-[3.75rem] inset-x-0 flex items-center justify-center gap-1 py-1.5 text-[11px] font-semibold bg-primary/90 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ShoppingCart className="w-3 h-3" /> Buy This Item
+                    </a>
+                  )}
                   {/* Hover actions */}
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {item.product_url && (
-                      <a
-                        href={item.product_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 rounded-full bg-secondary/80 text-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
                     <button
                       onClick={() => setDeleteTarget(item)}
                       className="p-1.5 rounded-full bg-destructive/80 text-destructive-foreground hover:bg-destructive transition-colors"
@@ -288,15 +289,15 @@ const Closet = () => {
                     {item.price && item.price !== "null" && <span className="text-xs text-muted-foreground">{item.price}</span>}
                   </div>
                 </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-2">
                   {item.product_url && (
                     <a href={item.product_url} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <ExternalLink className="w-3.5 h-3.5" />
+                      <Button size="sm" className="h-8 gap-1.5 text-xs font-display bg-primary hover:bg-primary/90 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ShoppingCart className="w-3 h-3" /> Buy
                       </Button>
                     </a>
                   )}
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(item)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setDeleteTarget(item)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>

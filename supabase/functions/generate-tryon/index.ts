@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch the user's photo as base64
+    // Fetch user photo as base64
     console.log('Fetching user photo...');
     const photoResponse = await fetch(photoUrl);
     if (!photoResponse.ok) throw new Error('Failed to fetch user photo');
@@ -47,66 +47,98 @@ Deno.serve(async (req) => {
     const photoBase64 = arrayBufferToBase64(photoBuffer);
     const photoMime = photoResponse.headers.get('content-type') || 'image/jpeg';
 
-    // Fetch outfit item images as base64
+    // Build outfit description
     const itemDescriptions: string[] = [];
-    const itemImages: { base64: string; mime: string }[] = [];
+    const itemImages: { base64: string; mime: string; name: string }[] = [];
 
     for (const item of outfitItems) {
-      itemDescriptions.push(
-        `${item.brand ? item.brand + ' ' : ''}${item.name}${item.category ? ' (' + item.category + ')' : ''}${item.color ? ' in ' + item.color : ''}`
-      );
+      const desc = [
+        item.brand,
+        item.name,
+        item.category ? `(${item.category})` : '',
+        item.color ? `in ${item.color}` : '',
+      ].filter(Boolean).join(' ');
+      itemDescriptions.push(desc);
+
       if (item.image_url) {
         try {
           const imgRes = await fetch(item.image_url);
           if (imgRes.ok) {
             const imgBuf = await imgRes.arrayBuffer();
-            const imgBase64 = arrayBufferToBase64(imgBuf);
-            const imgMime = imgRes.headers.get('content-type') || 'image/jpeg';
-            itemImages.push({ base64: imgBase64, mime: imgMime });
+            itemImages.push({
+              base64: arrayBufferToBase64(imgBuf),
+              mime: imgRes.headers.get('content-type') || 'image/jpeg',
+              name: desc,
+            });
           }
-        } catch (e) {
+        } catch {
           console.log('Could not fetch item image:', item.name);
         }
       }
     }
 
     const outfitDescription = itemDescriptions.join(', ');
-    const sizeNote = size === 'XS' || size === 'S' ? 'tight/fitted' :
-                     size === 'L' || size === 'XL' || size === 'XXL' ? 'loose/oversized' : 'regular fit';
+    const fitStyle =
+      size === 'XS' || size === 'S' ? 'tight/fitted' :
+      size === 'L' || size === 'XL' || size === 'XXL' ? 'loose/relaxed/oversized' :
+      'regular true-to-size';
 
     console.log('Generating try-on with', itemImages.length, 'item images, size:', size);
 
-    // Build content array for chat completions API
+    // ─── ADVANCED PROMPT ──────────────────────────────────────────────────────
+    // We treat this as a precision IMAGE EDITING task, NOT generation.
+    // The base image is the person's photo — EVERYTHING except clothing stays identical.
+    const systemInstruction = `You are a hyper-realistic virtual try-on AI that performs surgical clothing replacement on photos.
+
+ABSOLUTE RULES (never break these):
+1. The person's identity MUST be preserved exactly: same face, skin tone, hair, body shape, height, pose, and expression.
+2. The background MUST remain completely unchanged: same lighting, shadows, environment, and all surrounding pixels.
+3. ONLY replace the clothing/outfit items. Do not touch skin, hair, face, hands, feet, or background.
+4. Apply the new outfit so it drapes naturally on the person's exact body shape and pose.
+5. Maintain realistic lighting: the new clothing should catch light/shadow consistent with the scene lighting.
+6. Maintain realistic fabric physics: creases, folds, and drape appropriate for the garment type.
+7. Output must look like a single unedited real photograph — no seams, no collage artifacts.
+8. The size setting determines fit: ${fitStyle} for size ${size}.
+
+You are editing this photo. The person and background are SACRED and must not change.`;
+
+    const userPrompt = `TASK: Replace the person's current clothing with this outfit:
+${itemDescriptions.map((d, i) => `• Item ${i + 1}: ${d}`).join('\n')}
+
+Fit style: ${fitStyle} (size ${size})
+
+CRITICAL:
+- Keep the face, hair, skin tone, pose, and background 100% identical to the input photo
+- Only the clothing changes — everything else stays pixel-perfect
+- Make the outfit look natural on their body with proper draping and fit
+- Match the lighting of the scene
+
+The input photo is attached. Additional reference images of each clothing item follow.`;
+
+    // Build multimodal content array
     const userContent: any[] = [
-      {
-        type: 'text',
-        text: `You are a virtual try-on assistant. The first image is a photo of a person. The subsequent images are clothing items: ${outfitDescription}.
-
-Create a realistic image of this SAME person wearing these exact clothing items. The clothing should fit in a ${sizeNote} style (size ${size}).
-
-CRITICAL RULES:
-- Keep the person's face, body shape, pose, and background EXACTLY the same
-- Replace only their clothing with the provided outfit items
-- Make the clothing look natural and properly fitted on their body
-- Maintain realistic lighting, shadows, and proportions
-- The result should look like a real photo, not a collage`
-      },
+      { type: 'text', text: systemInstruction + '\n\n' + userPrompt },
+      // Person's photo — the base to edit
       {
         type: 'image_url',
-        image_url: { url: `data:${photoMime};base64,${photoBase64}` }
+        image_url: { url: `data:${photoMime};base64,${photoBase64}` },
       },
     ];
 
-    // Add outfit item images
-    for (const img of itemImages) {
+    // Add clothing reference images with labels
+    for (let i = 0; i < itemImages.length; i++) {
+      userContent.push({
+        type: 'text',
+        text: `Reference image for item ${i + 1}: ${itemImages[i].name}`,
+      });
       userContent.push({
         type: 'image_url',
-        image_url: { url: `data:${img.mime};base64,${img.base64}` }
+        image_url: { url: `data:${itemImages[i].mime};base64,${itemImages[i].base64}` },
       });
     }
 
-    // Call Lovable AI Gateway
-    const geminiResponse = await fetch(
+    // Call Lovable AI Gateway with image generation model
+    const aiResponse = await fetch(
       'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
         method: 'POST',
@@ -122,62 +154,60 @@ CRITICAL RULES:
       }
     );
 
-    if (!geminiResponse.ok) {
-      const errText = await geminiResponse.text();
-      console.error('AI gateway error:', geminiResponse.status, errText);
-      if (geminiResponse.status === 429) {
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text();
+      console.error('AI gateway error:', aiResponse.status, errText);
+      if (aiResponse.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: 'Rate limit exceeded, please try again later.' }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (geminiResponse.status === 402) {
+      if (aiResponse.status === 402) {
         return new Response(
           JSON.stringify({ success: false, error: 'AI credits exhausted. Please add funds.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       return new Response(
-        JSON.stringify({ success: false, error: `AI generation failed: ${geminiResponse.status}` }),
+        JSON.stringify({ success: false, error: `AI generation failed: ${aiResponse.status}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const geminiData = await geminiResponse.json();
+    const aiData = await aiResponse.json();
     console.log('AI response received');
 
-    // Extract the generated image from chat completions response
-    const images = geminiData.choices?.[0]?.message?.images;
+    // Extract generated image
+    const images = aiData.choices?.[0]?.message?.images;
     let generatedImageBase64: string | null = null;
 
     if (images && images.length > 0) {
       const imageUrl = images[0]?.image_url?.url;
       if (imageUrl && imageUrl.startsWith('data:')) {
-        // Extract base64 from data URI
         generatedImageBase64 = imageUrl.split(',')[1] || null;
       }
     }
 
     if (!generatedImageBase64) {
-      console.error('No image in AI response:', JSON.stringify(geminiData).substring(0, 500));
+      console.error('No image in AI response:', JSON.stringify(aiData).substring(0, 500));
       return new Response(
-        JSON.stringify({ success: false, error: 'AI did not generate an image. Try with a different photo.' }),
+        JSON.stringify({ success: false, error: 'AI did not generate an image. Try with a clearer full-body photo.' }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Save the generated image to storage
+    // Save result to storage
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Get user from auth header
     const authHeader = req.headers.get('Authorization') || '';
     const token = authHeader.replace('Bearer ', '');
-    
+
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { data: { user } } = await supabase.auth.getUser(token);
-    
+
     if (!user) {
       return new Response(
         JSON.stringify({ success: false, error: 'Unauthorized' }),
@@ -185,7 +215,7 @@ CRITICAL RULES:
       );
     }
 
-    // Convert base64 to Uint8Array for upload
+    // Convert base64 → Uint8Array
     const binaryStr = atob(generatedImageBase64);
     const bytes = new Uint8Array(binaryStr.length);
     for (let i = 0; i < binaryStr.length; i++) {
@@ -199,11 +229,11 @@ CRITICAL RULES:
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
-      // Return base64 directly as fallback
+      // Fallback: return base64 directly
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          imageBase64: `data:image/jpeg;base64,${generatedImageBase64}` 
+        JSON.stringify({
+          success: true,
+          imageBase64: `data:image/jpeg;base64,${generatedImageBase64}`,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

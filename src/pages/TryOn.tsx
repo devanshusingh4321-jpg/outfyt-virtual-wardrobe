@@ -188,7 +188,7 @@ const TryOn = () => {
     if (!compositeUrl || !user || !selectedOutfit) return;
     setSavingTryon(true);
     try {
-      const { error } = await supabase.from("tryon_photos" as any).insert({
+      const { error } = await supabase.from("tryon_photos").insert({
         user_id: user.id,
         image_url: compositeUrl,
         outfit_id: selectedOutfit.id,

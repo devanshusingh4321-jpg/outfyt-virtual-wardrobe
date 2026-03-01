@@ -68,11 +68,12 @@ const Closet = () => {
       .then(({ data }) => setItems((data as ClothingItem[]) || []));
 
     supabase
-      .from("tryon_photos" as any)
+      .from("tryon_photos")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .then(({ data }: any) => setTryonPhotos(data || []));
+      .limit(100)
+      .then(({ data }) => setTryonPhotos(data || []));
   }, [user]);
 
   const deleteTryonPhoto = async (id: string) => {

@@ -51,6 +51,10 @@ Deno.serve(async (req) => {
     const itemDescriptions: string[] = [];
     const itemImages: { base64: string; mime: string; name: string }[] = [];
 
+    // Fetch item images in parallel for performance
+    const itemDescriptions: string[] = [];
+    const fetchPromises: Promise<{ base64: string; mime: string; name: string } | null>[] = [];
+
     for (const item of outfitItems) {
       const desc = [
         item.brand,
@@ -61,21 +65,26 @@ Deno.serve(async (req) => {
       itemDescriptions.push(desc);
 
       if (item.image_url) {
-        try {
-          const imgRes = await fetch(item.image_url);
-          if (imgRes.ok) {
-            const imgBuf = await imgRes.arrayBuffer();
-            itemImages.push({
-              base64: arrayBufferToBase64(imgBuf),
-              mime: imgRes.headers.get('content-type') || 'image/jpeg',
-              name: desc,
-            });
-          }
-        } catch {
-          console.log('Could not fetch item image:', item.name);
-        }
+        fetchPromises.push(
+          fetch(item.image_url)
+            .then(async (imgRes) => {
+              if (!imgRes.ok) return null;
+              const imgBuf = await imgRes.arrayBuffer();
+              return {
+                base64: arrayBufferToBase64(imgBuf),
+                mime: imgRes.headers.get('content-type') || 'image/jpeg',
+                name: desc,
+              };
+            })
+            .catch(() => {
+              console.log('Could not fetch item image:', item.name);
+              return null;
+            })
+        );
       }
     }
+
+    const itemImages = (await Promise.all(fetchPromises)).filter(Boolean) as { base64: string; mime: string; name: string }[];
 
     const outfitDescription = itemDescriptions.join(', ');
     const fitStyle =

@@ -66,6 +66,11 @@ const Index = () => {
 
       {/* Hero */}
       <section className="relative pt-32 pb-24 md:pt-44 md:pb-36">
+        {/* 3D Scene */}
+        <Suspense fallback={null}>
+          <HeroScene />
+        </Suspense>
+
         {/* Background glow orbs */}
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-neon-purple/10 blur-[120px] animate-pulse_glow pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-neon-blue/8 blur-[100px] animate-pulse_glow pointer-events-none" style={{ animationDelay: "1.5s" }} />

@@ -489,17 +489,6 @@ const TryOn = () => {
                 </div>
               </div>
 
-              {/* AI Integration Note */}
-              <div className="glass rounded-xl p-4 flex items-start gap-3 border-primary/20">
-                <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-display font-semibold text-primary">AI Try-On Coming Soon</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Full AI-powered virtual try-on with realistic clothing placement is on the roadmap. 
-                    This MVP shows your outfit pieces scaled to your selected size.
-                  </p>
-                </div>
-              </div>
             </motion.div>
           )}
         </AnimatePresence>

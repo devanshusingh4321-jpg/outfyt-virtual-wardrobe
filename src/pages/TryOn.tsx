@@ -55,38 +55,60 @@ const TryOn = () => {
   const [generating, setGenerating] = useState(false);
   const [colorOverrides, setColorOverrides] = useState<ColorOverrides>({});
   const [savingTryon, setSavingTryon] = useState(false);
-  const [tryonSaved, setTryonSaved] = useState(false);
+   const [tryonSaved, setTryonSaved] = useState(false);
+  const [loadingOutfits, setLoadingOutfits] = useState(true);
 
-  // Load outfits with their items
+  // Load outfits with their items — optimized batch query
   useEffect(() => {
     if (!user) return;
     const loadOutfits = async () => {
-      const { data: outfitRows } = await supabase
-        .from("outfits")
-        .select("id, name")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      setLoadingOutfits(true);
+      try {
+        const { data: outfitRows } = await supabase
+          .from("outfits")
+          .select("id, name")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(50);
 
-      if (!outfitRows || outfitRows.length === 0) return;
+        if (!outfitRows || outfitRows.length === 0) {
+          setOutfits([]);
+          return;
+        }
 
-      const loaded: Outfit[] = [];
-      for (const o of outfitRows) {
-        const { data: oi } = await supabase
+        // Batch: fetch ALL outfit_items for all outfits at once
+        const outfitIds = outfitRows.map((o) => o.id);
+        const { data: allOi } = await supabase
           .from("outfit_items")
-          .select("clothing_item_id")
-          .eq("outfit_id", o.id);
-        if (oi && oi.length > 0) {
-          const ids = oi.map((i) => i.clothing_item_id);
+          .select("outfit_id, clothing_item_id")
+          .in("outfit_id", outfitIds);
+
+        // Collect unique clothing item IDs
+        const allClothingIds = [...new Set((allOi || []).map((oi) => oi.clothing_item_id))];
+
+        // Single batch fetch for all clothing items
+        let clothingMap: Record<string, ClothingItem> = {};
+        if (allClothingIds.length > 0) {
           const { data: clothes } = await supabase
             .from("clothing_items")
             .select("id, name, brand, image_url, category, price, colors")
-            .in("id", ids);
-          loaded.push({ ...o, items: (clothes || []) as ClothingItem[] });
-        } else {
-          loaded.push({ ...o, items: [] });
+            .in("id", allClothingIds);
+          for (const c of (clothes || [])) {
+            clothingMap[c.id] = c as ClothingItem;
+          }
         }
+
+        // Assemble outfits
+        const loaded: Outfit[] = outfitRows.map((o) => {
+          const itemIds = (allOi || []).filter((oi) => oi.outfit_id === o.id).map((oi) => oi.clothing_item_id);
+          return { ...o, items: itemIds.map((id) => clothingMap[id]).filter(Boolean) };
+        });
+        setOutfits(loaded);
+      } catch (err) {
+        console.error("Failed to load outfits:", err);
+      } finally {
+        setLoadingOutfits(false);
       }
-      setOutfits(loaded);
     };
     loadOutfits();
   }, [user]);

@@ -2,7 +2,9 @@ import { motion } from "framer-motion";
 import { Link, Shirt, Sparkles, Eye, ArrowRight, Zap, Layers, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 
+const HeroScene = lazy(() => import("@/components/HeroScene"));
 const steps = [
   {
     icon: Link,

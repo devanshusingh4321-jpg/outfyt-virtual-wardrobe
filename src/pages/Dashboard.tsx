@@ -11,22 +11,28 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [outfits, setOutfits] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("clothing_items")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setItems(data || []));
-
-    supabase
-      .from("outfits")
-      .select("*, outfit_items(clothing_item_id)")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setOutfits(data || []));
+    Promise.all([
+      supabase
+        .from("clothing_items")
+        .select("id, name, brand, price, image_url, category, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("outfits")
+        .select("id, name, created_at, outfit_items(clothing_item_id)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]).then(([itemsRes, outfitsRes]) => {
+      setItems(itemsRes.data || []);
+      setOutfits(outfitsRes.data || []);
+      setLoadingData(false);
+    });
   }, [user]);
 
   if (loading) return null;

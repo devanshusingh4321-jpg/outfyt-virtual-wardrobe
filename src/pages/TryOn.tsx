@@ -281,7 +281,12 @@ const TryOn = () => {
             <Layers className="w-4 h-4 text-primary" /> Step 2 — Select an Outfit
           </h2>
 
-          {outfits.length === 0 ? (
+          {loadingOutfits ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground ml-2">Loading outfits...</span>
+            </div>
+          ) : outfits.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               No outfits yet. <button onClick={() => navigate("/outfit/new")} className="text-primary underline">Create one first</button>.
             </p>

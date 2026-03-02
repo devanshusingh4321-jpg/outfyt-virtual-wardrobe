@@ -7,7 +7,7 @@ const NeonRing = ({ radius, color, speed, wobble }: { radius: number; color: str
   const ref = useRef<THREE.Mesh>(null!);
   useFrame((state) => {
     ref.current.rotation.x = Math.sin(state.clock.elapsedTime * speed * 0.3) * 0.3;
-    ref.current.rotation.y += speed * 0.005;
+    ref.current.rotation.y += speed * 0.004;
     ref.current.rotation.z = Math.cos(state.clock.elapsedTime * speed * 0.2) * 0.15;
   });
   return (
@@ -16,11 +16,11 @@ const NeonRing = ({ radius, color, speed, wobble }: { radius: number; color: str
       <MeshWobbleMaterial
         color={color}
         emissive={color}
-        emissiveIntensity={2.5}
+        emissiveIntensity={2}
         factor={wobble}
-        speed={speed}
+        speed={speed * 0.7}
         transparent
-        opacity={0.8}
+        opacity={0.7}
       />
     </mesh>
   );
@@ -29,22 +29,22 @@ const NeonRing = ({ radius, color, speed, wobble }: { radius: number; color: str
 const GlowSphere = () => {
   const ref = useRef<THREE.Mesh>(null!);
   useFrame((state) => {
-    ref.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 0.8) * 0.08);
+    ref.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 0.6) * 0.06);
   });
   return (
-    <Float speed={2} rotationIntensity={0.4} floatIntensity={1.2}>
+    <Float speed={1.5} rotationIntensity={0.3} floatIntensity={1}>
       <mesh ref={ref}>
         <icosahedronGeometry args={[0.9, 4]} />
         <MeshDistortMaterial
-          color="#7c3aed"
-          emissive="#7c3aed"
-          emissiveIntensity={0.6}
+          color="#0099ff"
+          emissive="#0088ff"
+          emissiveIntensity={0.5}
           roughness={0.2}
           metalness={0.8}
-          distort={0.35}
-          speed={2}
+          distort={0.3}
+          speed={1.5}
           transparent
-          opacity={0.3}
+          opacity={0.25}
         />
       </mesh>
     </Float>
@@ -54,9 +54,9 @@ const GlowSphere = () => {
 const FloatingDiamond = ({ position, color, scale, speed }: { position: [number, number, number]; color: string; scale: number; speed: number }) => {
   const ref = useRef<THREE.Mesh>(null!);
   useFrame((state) => {
-    ref.current.rotation.y += 0.01 * speed;
-    ref.current.rotation.x = Math.sin(state.clock.elapsedTime * speed * 0.5) * 0.5;
-    ref.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * speed * 0.7) * 0.3;
+    ref.current.rotation.y += 0.008 * speed;
+    ref.current.rotation.x = Math.sin(state.clock.elapsedTime * speed * 0.4) * 0.4;
+    ref.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * speed * 0.5) * 0.25;
   });
   return (
     <mesh ref={ref} position={position} scale={scale}>
@@ -64,9 +64,9 @@ const FloatingDiamond = ({ position, color, scale, speed }: { position: [number,
       <meshStandardMaterial
         color={color}
         emissive={color}
-        emissiveIntensity={1.5}
+        emissiveIntensity={1.2}
         transparent
-        opacity={0.7}
+        opacity={0.6}
         metalness={0.9}
         roughness={0.1}
       />
@@ -75,7 +75,7 @@ const FloatingDiamond = ({ position, color, scale, speed }: { position: [number,
 };
 
 const ParticleField = () => {
-  const count = 80;
+  const count = 60;
   const positions = useMemo(() => {
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -88,7 +88,7 @@ const ParticleField = () => {
 
   const ref = useRef<THREE.Points>(null!);
   useFrame((state) => {
-    ref.current.rotation.y = state.clock.elapsedTime * 0.02;
+    ref.current.rotation.y = state.clock.elapsedTime * 0.015;
   });
 
   return (
@@ -103,9 +103,9 @@ const ParticleField = () => {
       </bufferGeometry>
       <pointsMaterial
         size={0.02}
-        color="#00d4ff"
+        color="#00aaff"
         transparent
-        opacity={0.6}
+        opacity={0.5}
         sizeAttenuation
       />
     </points>
@@ -115,31 +115,30 @@ const ParticleField = () => {
 const Scene = () => {
   return (
     <>
-      <ambientLight intensity={0.15} />
-      <pointLight position={[3, 3, 3]} intensity={1} color="#7c3aed" />
-      <pointLight position={[-3, -2, 2]} intensity={0.6} color="#00d4ff" />
-      <pointLight position={[0, 2, -3]} intensity={0.4} color="#e040a0" />
+      <ambientLight intensity={0.1} />
+      <pointLight position={[3, 3, 3]} intensity={0.8} color="#0088ff" />
+      <pointLight position={[-3, -2, 2]} intensity={0.5} color="#00bbff" />
+      <pointLight position={[0, 2, -3]} intensity={0.3} color="#0066cc" />
 
       <GlowSphere />
 
-      <NeonRing radius={1.6} color="#7c3aed" speed={1} wobble={0.3} />
-      <NeonRing radius={2.0} color="#00d4ff" speed={0.7} wobble={0.2} />
-      <NeonRing radius={2.4} color="#e040a0" speed={0.5} wobble={0.15} />
+      <NeonRing radius={1.6} color="#0088ff" speed={0.8} wobble={0.25} />
+      <NeonRing radius={2.0} color="#00aaff" speed={0.5} wobble={0.15} />
+      <NeonRing radius={2.4} color="#0066cc" speed={0.35} wobble={0.1} />
 
-      <FloatingDiamond position={[2.2, 1, -1]} color="#7c3aed" scale={0.6} speed={1.2} />
-      <FloatingDiamond position={[-2, -0.8, -0.5]} color="#00d4ff" scale={0.5} speed={0.9} />
-      <FloatingDiamond position={[1.5, -1.5, 0.5]} color="#e040a0" scale={0.4} speed={1.5} />
-      <FloatingDiamond position={[-1.8, 1.5, 0]} color="#7c3aed" scale={0.35} speed={1.1} />
+      <FloatingDiamond position={[2.2, 1, -1]} color="#0088ff" scale={0.5} speed={0.9} />
+      <FloatingDiamond position={[-2, -0.8, -0.5]} color="#00aaff" scale={0.4} speed={0.7} />
+      <FloatingDiamond position={[1.5, -1.5, 0.5]} color="#0066cc" scale={0.35} speed={1.1} />
 
       <ParticleField />
 
       <Sparkles
-        count={50}
-        size={2}
+        count={40}
+        size={1.5}
         scale={6}
-        speed={0.4}
-        color="#7c3aed"
-        opacity={0.5}
+        speed={0.3}
+        color="#00aaff"
+        opacity={0.4}
       />
     </>
   );

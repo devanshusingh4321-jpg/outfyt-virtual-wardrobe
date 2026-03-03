@@ -50,6 +50,7 @@ const OutfitBuilder = () => {
   const [saving, setSaving] = useState(false);
   const [showCloset, setShowCloset] = useState(false);
   const [filterZone, setFilterZone] = useState<BodyZone | "all">("all");
+  const [addingSuggestionIndex, setAddingSuggestionIndex] = useState<number | null>(null);
   const outfitCardRef = useRef<HTMLDivElement>(null);
 
   // Load user closet items

@@ -12,6 +12,7 @@ import OutfitBuilder from "./pages/OutfitBuilder";
 import TryOn from "./pages/TryOn";
 import Closet from "./pages/Closet";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 

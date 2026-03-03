@@ -376,10 +376,65 @@ const TryOn = () => {
           </div>
         )}
 
-        {/* Step 3: Size Simulation */}
+        {/* Step 3: Styling Options */}
+        {selectedOutfit && selectedOutfit.items.some(i => TUCKABLE_CATEGORIES.includes(i.category || '') || BUTTONABLE_CATEGORIES.includes(i.category || '')) && (
+          <div className="glass rounded-2xl p-6 space-y-4">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Shirt className="w-4 h-4 text-primary" /> Styling Options
+            </h2>
+            <div className="space-y-3">
+              {selectedOutfit.items
+                .filter(i => TUCKABLE_CATEGORIES.includes(i.category || '') || BUTTONABLE_CATEGORIES.includes(i.category || ''))
+                .map((item) => {
+                  const opts = stylingOptions[item.id] || {};
+                  const canTuck = TUCKABLE_CATEGORIES.includes(item.category || '');
+                  const canButton = BUTTONABLE_CATEGORIES.includes(item.category || '');
+                  return (
+                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                      <span className="text-sm font-medium truncate min-w-[120px] max-w-[180px]">{item.name}</span>
+                      <div className="flex gap-2 flex-wrap">
+                        {canButton && (
+                          <button
+                            onClick={() => setStylingOptions(prev => ({
+                              ...prev,
+                              [item.id]: { ...prev[item.id], buttoned: !opts.buttoned }
+                            }))}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border flex items-center gap-1.5 ${
+                              opts.buttoned
+                                ? "border-primary bg-primary/15 text-primary"
+                                : "border-border/50 bg-secondary/30 text-muted-foreground hover:border-primary/50"
+                            }`}
+                          >
+                            {opts.buttoned ? "Buttoned Up" : "Unbuttoned"}
+                          </button>
+                        )}
+                        {canTuck && (
+                          <button
+                            onClick={() => setStylingOptions(prev => ({
+                              ...prev,
+                              [item.id]: { ...prev[item.id], tucked: !opts.tucked }
+                            }))}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border flex items-center gap-1.5 ${
+                              opts.tucked
+                                ? "border-primary bg-primary/15 text-primary"
+                                : "border-border/50 bg-secondary/30 text-muted-foreground hover:border-primary/50"
+                            }`}
+                          >
+                            {opts.tucked ? "Tucked In" : "Untucked"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Size Simulation */}
         <div className="glass rounded-2xl p-6 space-y-4">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" /> Step 3 — Size Simulation
+            <Sparkles className="w-4 h-4 text-primary" /> Step {selectedOutfit && selectedOutfit.items.some(i => TUCKABLE_CATEGORIES.includes(i.category || '') || BUTTONABLE_CATEGORIES.includes(i.category || '')) ? "4" : "3"} — Size Simulation
           </h2>
 
           <div className="flex items-center gap-4">

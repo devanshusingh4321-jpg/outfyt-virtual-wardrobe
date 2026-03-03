@@ -302,7 +302,7 @@ const TryOn = () => {
               {outfits.map((outfit) => (
                 <button
                   key={outfit.id}
-                  onClick={() => { setSelectedOutfit(outfit); setColorOverrides({}); }}
+                  onClick={() => { setSelectedOutfit(outfit); setColorOverrides({}); setStylingOptions({}); }}
                   className={`rounded-xl p-4 text-left transition-all border ${
                     selectedOutfit?.id === outfit.id
                       ? "border-primary bg-primary/10 glow-purple"

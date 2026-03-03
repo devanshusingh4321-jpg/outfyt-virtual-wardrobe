@@ -49,10 +49,6 @@ Deno.serve(async (req) => {
 
     // Build outfit description
     const itemDescriptions: string[] = [];
-    const itemImages: { base64: string; mime: string; name: string }[] = [];
-
-    // Fetch item images in parallel for performance
-    const itemDescriptions: string[] = [];
     const fetchPromises: Promise<{ base64: string; mime: string; name: string } | null>[] = [];
 
     for (const item of outfitItems) {

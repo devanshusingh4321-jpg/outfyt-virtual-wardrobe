@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Loader2, Shirt, Footprints, Wind, Crown, Layers, Tag } from "lucide-react";
+import { Sparkles, Loader2, Shirt, Footprints, Wind, Crown, Layers, Tag, Plus } from "lucide-react";
 
 type OutfitItem = {
   name: string;

@@ -83,7 +83,7 @@ const Auth = () => {
             OUTFYT
           </a>
           <p className="text-muted-foreground mt-2 text-sm">
-            {isLogin ? "Welcome back to your drip." : "Start building your drip."}
+            {forgotMode ? "Reset your password." : isLogin ? "Welcome back to your drip." : "Start building your drip."}
           </p>
         </div>
 

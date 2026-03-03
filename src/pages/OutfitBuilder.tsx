@@ -116,9 +116,7 @@ const OutfitBuilder = () => {
 
   const addSuggestionToOutfit = async (suggestion: { category: string; brand?: string; item_name: string; color: string; reason: string; price_range?: string }) => {
     if (!user) return;
-    const idx = (await import("@/components/StyleSuggestions")).default ? 0 : 0; // just for flow
-    // Find the index from the current result
-    setAddingSuggestionIndex(-1); // temporary marker
+    setAddingSuggestionIndex(-1);
     try {
       // Save as a new clothing item in the user's closet
       const { data, error } = await supabase

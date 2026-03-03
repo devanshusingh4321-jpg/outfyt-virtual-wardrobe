@@ -114,6 +114,39 @@ const OutfitBuilder = () => {
     setOutfitItems((prev) => prev.filter((i) => i.id !== id));
   };
 
+  const addSuggestionToOutfit = async (suggestion: { category: string; brand?: string; item_name: string; color: string; reason: string; price_range?: string }) => {
+    if (!user) return;
+    const idx = (await import("@/components/StyleSuggestions")).default ? 0 : 0; // just for flow
+    // Find the index from the current result
+    setAddingSuggestionIndex(-1); // temporary marker
+    try {
+      // Save as a new clothing item in the user's closet
+      const { data, error } = await supabase
+        .from("clothing_items")
+        .insert({
+          user_id: user.id,
+          name: suggestion.item_name,
+          brand: suggestion.brand || null,
+          category: suggestion.category,
+          selected_color: suggestion.color,
+          price: suggestion.price_range || null,
+        })
+        .select("id, name, brand, image_url, category, price, product_url, selected_color, selected_size")
+        .single();
+
+      if (error) throw error;
+
+      const newItem = data as ClothingItem;
+      setOutfitItems((prev) => [...prev, newItem]);
+      setClosetItems((prev) => [newItem, ...prev]);
+      toast({ title: `Added ${suggestion.item_name} ✨` });
+    } catch (err: any) {
+      toast({ title: "Failed to add", description: err.message, variant: "destructive" });
+    } finally {
+      setAddingSuggestionIndex(null);
+    }
+  };
+
   const saveOutfit = async () => {
     if (!user || outfitItems.length === 0) return;
     setSaving(true);

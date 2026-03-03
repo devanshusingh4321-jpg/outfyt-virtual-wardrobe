@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Loader2, Shirt, Footprints, Wind, Crown, Layers, Tag } from "lucide-react";
+import { Sparkles, Loader2, Shirt, Footprints, Wind, Crown, Layers, Tag, Plus } from "lucide-react";
 
 type OutfitItem = {
   name: string;
@@ -39,9 +39,11 @@ const ALL_ZONES = ["topwear", "bottomwear", "outerwear", "footwear", "accessory"
 
 type Props = {
   outfitItems: OutfitItem[];
+  onAddSuggestion?: (suggestion: Suggestion) => void;
+  addingIndex?: number | null;
 };
 
-const StyleSuggestions = ({ outfitItems }: Props) => {
+const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex }: Props) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<StylingResult | null>(null);
@@ -117,11 +119,11 @@ const StyleSuggestions = ({ outfitItems }: Props) => {
                   className="glass rounded-xl p-4 space-y-2"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-accent">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-accent shrink-0">
                         {ZONE_ICONS[s.category] || <Tag className="w-4 h-4" />}
                       </span>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm font-semibold">
                           {s.brand && <span className="text-primary">{s.brand} </span>}
                           {s.item_name}
@@ -135,6 +137,18 @@ const StyleSuggestions = ({ outfitItems }: Props) => {
                         </div>
                       </div>
                     </div>
+                    {onAddSuggestion && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0 h-7 text-xs gap-1 border-accent/30 text-accent hover:bg-accent/10"
+                        onClick={() => onAddSuggestion(s)}
+                        disabled={addingIndex === i}
+                      >
+                        {addingIndex === i ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                        Add
+                      </Button>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">{s.reason}</p>
                 </motion.div>

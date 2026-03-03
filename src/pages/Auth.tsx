@@ -136,20 +136,31 @@ const Auth = () => {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  {isLogin ? "Log In" : "Sign Up"} <ArrowRight className="w-4 h-4" />
+                  {forgotMode ? "Send Reset Link" : isLogin ? "Log In" : "Sign Up"} <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          {isLogin && !forgotMode && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => setForgotMode(true)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Forgot password? <span className="text-primary font-medium">Reset it</span>
+              </button>
+            </div>
+          )}
+
+          <div className="mt-4 text-center">
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => { setIsLogin(!isLogin); setForgotMode(false); }}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              {forgotMode ? "Back to " : isLogin ? "Don't have an account? " : "Already have an account? "}
               <span className="text-primary font-medium">
-                {isLogin ? "Sign up" : "Log in"}
+                {forgotMode ? "Log in" : isLogin ? "Sign up" : "Log in"}
               </span>
             </button>
           </div>

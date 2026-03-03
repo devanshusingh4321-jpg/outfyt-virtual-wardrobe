@@ -32,6 +32,7 @@ const App = () => (
             <Route path="/outfit/:outfitId" element={<OutfitBuilder />} />
             <Route path="/try-on" element={<TryOn />} />
             <Route path="/closet" element={<Closet />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

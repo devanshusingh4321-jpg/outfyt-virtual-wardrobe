@@ -39,6 +39,8 @@ const ALL_ZONES = ["topwear", "bottomwear", "outerwear", "footwear", "accessory"
 
 type Props = {
   outfitItems: OutfitItem[];
+  onAddSuggestion?: (suggestion: Suggestion) => void;
+  addingIndex?: number | null;
 };
 
 const StyleSuggestions = ({ outfitItems }: Props) => {

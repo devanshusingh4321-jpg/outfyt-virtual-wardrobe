@@ -60,8 +60,9 @@ const TryOn = () => {
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [colorOverrides, setColorOverrides] = useState<ColorOverrides>({});
+  const [stylingOptions, setStylingOptions] = useState<StylingOptions>({});
   const [savingTryon, setSavingTryon] = useState(false);
-   const [tryonSaved, setTryonSaved] = useState(false);
+  const [tryonSaved, setTryonSaved] = useState(false);
   const [loadingOutfits, setLoadingOutfits] = useState(true);
 
   // Load outfits with their items — optimized batch query

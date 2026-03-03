@@ -422,7 +422,11 @@ const OutfitBuilder = () => {
 
         {/* AI Styling Suggestions */}
         {outfitItems.length > 0 && (
-          <StyleSuggestions outfitItems={outfitItems} />
+          <StyleSuggestions
+            outfitItems={outfitItems}
+            onAddSuggestion={addSuggestionToOutfit}
+            addingIndex={addingSuggestionIndex}
+          />
         )}
 
         {/* Total Cost & Buy All */}

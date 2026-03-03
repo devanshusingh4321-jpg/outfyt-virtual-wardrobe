@@ -15,6 +15,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
 
   if (loading) {
     return (
@@ -31,6 +32,18 @@ const Auth = () => {
     setSubmitting(true);
 
     try {
+      if (forgotMode) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast({
+          title: "Check your email",
+          description: "We sent you a password reset link.",
+        });
+        return;
+      }
+
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -70,14 +83,14 @@ const Auth = () => {
             OUTFYT
           </a>
           <p className="text-muted-foreground mt-2 text-sm">
-            {isLogin ? "Welcome back to your drip." : "Start building your drip."}
+            {forgotMode ? "Reset your password." : isLogin ? "Welcome back to your drip." : "Start building your drip."}
           </p>
         </div>
 
         {/* Form */}
         <div className="glass rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {!isLogin && !forgotMode && (
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -100,18 +113,20 @@ const Auth = () => {
                 required
               />
             </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 bg-secondary/50 border-border/50 h-11"
-                minLength={6}
-                required
-              />
-            </div>
+            {!forgotMode && (
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 bg-secondary/50 border-border/50 h-11"
+                  minLength={6}
+                  required
+                />
+              </div>
+            )}
             <Button
               type="submit"
               disabled={submitting}
@@ -121,20 +136,31 @@ const Auth = () => {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  {isLogin ? "Log In" : "Sign Up"} <ArrowRight className="w-4 h-4" />
+                  {forgotMode ? "Send Reset Link" : isLogin ? "Log In" : "Sign Up"} <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          {isLogin && !forgotMode && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => setForgotMode(true)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Forgot password? <span className="text-primary font-medium">Reset it</span>
+              </button>
+            </div>
+          )}
+
+          <div className="mt-4 text-center">
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => { setIsLogin(!isLogin); setForgotMode(false); }}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              {forgotMode ? "Back to " : isLogin ? "Don't have an account? " : "Already have an account? "}
               <span className="text-primary font-medium">
-                {isLogin ? "Sign up" : "Log in"}
+                {forgotMode ? "Log in" : isLogin ? "Sign up" : "Log in"}
               </span>
             </button>
           </div>

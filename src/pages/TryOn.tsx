@@ -39,6 +39,12 @@ const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 // Track per-item color overrides
 type ColorOverrides = Record<string, string>;
 
+// Track per-item styling options
+type StylingOptions = Record<string, { buttoned?: boolean; tucked?: boolean }>;
+
+const TUCKABLE_CATEGORIES = ["topwear", "outerwear"];
+const BUTTONABLE_CATEGORIES = ["topwear", "outerwear"];
+
 const TryOn = () => {
   const { user, loading } = useAuth();
   const { toast } = useToast();

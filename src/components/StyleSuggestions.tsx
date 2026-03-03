@@ -43,7 +43,7 @@ type Props = {
   addingIndex?: number | null;
 };
 
-const StyleSuggestions = ({ outfitItems }: Props) => {
+const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex }: Props) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<StylingResult | null>(null);

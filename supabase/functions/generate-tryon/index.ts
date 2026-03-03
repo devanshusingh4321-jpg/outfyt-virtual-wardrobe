@@ -52,11 +52,18 @@ Deno.serve(async (req) => {
     const fetchPromises: Promise<{ base64: string; mime: string; name: string } | null>[] = [];
 
     for (const item of outfitItems) {
+      const stylingNotes: string[] = [];
+      if (item.buttoned === true) stylingNotes.push('buttoned up');
+      if (item.buttoned === false) stylingNotes.push('unbuttoned/open');
+      if (item.tucked === true) stylingNotes.push('tucked into pants/bottoms');
+      if (item.tucked === false) stylingNotes.push('untucked/hanging loose');
+
       const desc = [
         item.brand,
         item.name,
         item.category ? `(${item.category})` : '',
         item.color ? `in ${item.color}` : '',
+        stylingNotes.length > 0 ? `— ${stylingNotes.join(', ')}` : '',
       ].filter(Boolean).join(' ');
       itemDescriptions.push(desc);
 

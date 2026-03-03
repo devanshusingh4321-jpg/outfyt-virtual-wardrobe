@@ -169,6 +169,8 @@ const TryOn = () => {
             image_url: i.image_url,
             category: i.category,
             color: colorOverrides[i.id] || (i.colors && i.colors.length > 0 ? i.colors[0] : null),
+            buttoned: stylingOptions[i.id]?.buttoned,
+            tucked: stylingOptions[i.id]?.tucked,
           })),
           size: sizeSimulation,
         },

@@ -51,7 +51,21 @@ const OutfitBuilder = () => {
   const [showCloset, setShowCloset] = useState(false);
   const [filterZone, setFilterZone] = useState<BodyZone | "all">("all");
   const [addingSuggestionIndex, setAddingSuggestionIndex] = useState<number | null>(null);
+  const [userCountry, setUserCountry] = useState<string | null>(null);
   const outfitCardRef = useRef<HTMLDivElement>(null);
+
+  // Load user country from profile
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("country")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setUserCountry((data as any).country);
+      });
+  }, [user]);
 
   // Load user closet items
   useEffect(() => {

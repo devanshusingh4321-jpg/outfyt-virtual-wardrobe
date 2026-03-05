@@ -63,7 +63,7 @@ const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex, country }
       const missingZones = ALL_ZONES.filter((z) => !presentZones.has(z));
 
       const { data, error } = await supabase.functions.invoke("style-suggestions", {
-        body: { outfitItems, missingZones },
+        body: { outfitItems, missingZones, country },
       });
 
       if (error) throw new Error(error.message || "Failed to get suggestions");

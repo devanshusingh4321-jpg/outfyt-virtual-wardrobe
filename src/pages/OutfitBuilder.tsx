@@ -472,6 +472,7 @@ const OutfitBuilder = () => {
             outfitItems={outfitItems}
             onAddSuggestion={addSuggestionToOutfit}
             addingIndex={addingSuggestionIndex}
+            country={userCountry}
           />
         )}
 

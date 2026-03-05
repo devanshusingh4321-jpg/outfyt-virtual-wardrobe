@@ -44,7 +44,7 @@ type Props = {
   country?: string | null;
 };
 
-const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex }: Props) => {
+const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex, country }: Props) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<StylingResult | null>(null);

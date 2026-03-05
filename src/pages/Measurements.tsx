@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate } from "react-router-dom";
-import { Loader2, Save, Ruler } from "lucide-react";
+import { Loader2, Save, Ruler, Globe } from "lucide-react";
+import { COUNTRIES } from "@/lib/countries";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Measurements = () => {
   const { user, loading: authLoading } = useAuth();
@@ -19,13 +27,14 @@ const Measurements = () => {
     height: "",
     weight: "",
     fit_preference: "regular",
+    country: "",
   });
 
   useEffect(() => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("chest, waist, hips, height, weight, fit_preference")
+      .select("chest, waist, hips, height, weight, fit_preference, country")
       .eq("id", user.id)
       .single()
       .then(({ data }) => {
@@ -37,6 +46,7 @@ const Measurements = () => {
             height: data.height?.toString() || "",
             weight: data.weight?.toString() || "",
             fit_preference: data.fit_preference || "regular",
+            country: (data as any).country || "",
           });
         }
         setLoading(false);
@@ -60,11 +70,12 @@ const Measurements = () => {
           height: form.height ? parseFloat(form.height) : null,
           weight: form.weight ? parseFloat(form.weight) : null,
           fit_preference: form.fit_preference,
-        })
+          country: form.country || null,
+        } as any)
         .eq("id", user.id);
 
       if (error) throw error;
-      toast({ title: "Measurements saved! 📏" });
+      toast({ title: "Settings saved! 📏" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -92,6 +103,28 @@ const Measurements = () => {
         </p>
 
         <form onSubmit={handleSave} className="space-y-5">
+          {/* Country */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+              <Globe className="w-3 h-3" /> Country / Region
+            </label>
+            <Select
+              value={form.country}
+              onValueChange={(val) => setForm((f) => ({ ...f, country: val }))}
+            >
+              <SelectTrigger className="bg-secondary/50 border-border/50 h-11">
+                <SelectValue placeholder="Select your country" />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.flag} {c.name} ({c.currencySymbol})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             {[
               { key: "chest", label: "Chest (inches)", placeholder: "38" },
@@ -136,7 +169,7 @@ const Measurements = () => {
           </div>
 
           <Button type="submit" disabled={saving} className="w-full glow-purple bg-primary hover:bg-primary/90 font-display h-11 gap-2">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save Measurements</>}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save Settings</>}
           </Button>
         </form>
       </div>

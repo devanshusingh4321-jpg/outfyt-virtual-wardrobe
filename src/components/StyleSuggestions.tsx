@@ -41,9 +41,10 @@ type Props = {
   outfitItems: OutfitItem[];
   onAddSuggestion?: (suggestion: Suggestion) => void;
   addingIndex?: number | null;
+  country?: string | null;
 };
 
-const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex }: Props) => {
+const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex, country }: Props) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<StylingResult | null>(null);
@@ -62,7 +63,7 @@ const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex }: Props) 
       const missingZones = ALL_ZONES.filter((z) => !presentZones.has(z));
 
       const { data, error } = await supabase.functions.invoke("style-suggestions", {
-        body: { outfitItems, missingZones },
+        body: { outfitItems, missingZones, country },
       });
 
       if (error) throw new Error(error.message || "Failed to get suggestions");

@@ -1,10 +1,18 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, Ruler, Shirt, Plus, Layers, Eye } from "lucide-react";
+import { LogOut, Ruler, Shirt, Plus, Layers, Eye, Globe } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AddProduct from "@/components/AddProduct";
+import { COUNTRIES, getCountryByCode } from "@/lib/countries";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
@@ -12,6 +20,7 @@ const Dashboard = () => {
   const [items, setItems] = useState<any[]>([]);
   const [outfits, setOutfits] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [country, setCountry] = useState<string>("");
 
   useEffect(() => {
     if (!user) return;
@@ -28,12 +37,27 @@ const Dashboard = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50),
-    ]).then(([itemsRes, outfitsRes]) => {
+      supabase
+        .from("profiles")
+        .select("country")
+        .eq("id", user.id)
+        .single(),
+    ]).then(([itemsRes, outfitsRes, profileRes]) => {
       setItems(itemsRes.data || []);
       setOutfits(outfitsRes.data || []);
+      if (profileRes.data) setCountry((profileRes.data as any).country || "");
       setLoadingData(false);
     });
   }, [user]);
+
+  const handleCountryChange = async (value: string) => {
+    setCountry(value);
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({ country: value } as any)
+      .eq("id", user.id);
+  };
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
@@ -62,11 +86,28 @@ const Dashboard = () => {
       </nav>
 
       <div className="container py-8 space-y-8">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Your Drip Dashboard 🔥</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Add products, build outfits, and get smart size recommendations.
-          </p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="font-display text-2xl font-bold">Your Drip Dashboard 🔥</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add products, build outfits, and get smart size recommendations.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+            <Select value={country} onValueChange={handleCountryChange}>
+              <SelectTrigger className="w-[180px] bg-secondary/50 border-border/50 h-9 text-sm">
+                <SelectValue placeholder="Choose country" />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.flag} {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Add Product Section */}

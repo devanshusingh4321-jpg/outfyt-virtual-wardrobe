@@ -37,12 +37,27 @@ const Dashboard = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50),
-    ]).then(([itemsRes, outfitsRes]) => {
+      supabase
+        .from("profiles")
+        .select("country")
+        .eq("id", user.id)
+        .single(),
+    ]).then(([itemsRes, outfitsRes, profileRes]) => {
       setItems(itemsRes.data || []);
       setOutfits(outfitsRes.data || []);
+      if (profileRes.data) setCountry((profileRes.data as any).country || "");
       setLoadingData(false);
     });
   }, [user]);
+
+  const handleCountryChange = async (value: string) => {
+    setCountry(value);
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({ country: value } as any)
+      .eq("id", user.id);
+  };
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;

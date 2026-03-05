@@ -1,10 +1,18 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, Ruler, Shirt, Plus, Layers, Eye } from "lucide-react";
+import { LogOut, Ruler, Shirt, Plus, Layers, Eye, Globe } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AddProduct from "@/components/AddProduct";
+import { COUNTRIES, getCountryByCode } from "@/lib/countries";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
@@ -12,6 +20,7 @@ const Dashboard = () => {
   const [items, setItems] = useState<any[]>([]);
   const [outfits, setOutfits] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [country, setCountry] = useState<string>("");
 
   useEffect(() => {
     if (!user) return;

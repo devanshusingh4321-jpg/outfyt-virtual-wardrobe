@@ -137,6 +137,7 @@ export type Database = {
       profiles: {
         Row: {
           chest: number | null
+          country: string | null
           created_at: string
           display_name: string | null
           fit_preference: string | null
@@ -149,6 +150,7 @@ export type Database = {
         }
         Insert: {
           chest?: number | null
+          country?: string | null
           created_at?: string
           display_name?: string | null
           fit_preference?: string | null
@@ -161,6 +163,7 @@ export type Database = {
         }
         Update: {
           chest?: number | null
+          country?: string | null
           created_at?: string
           display_name?: string | null
           fit_preference?: string | null

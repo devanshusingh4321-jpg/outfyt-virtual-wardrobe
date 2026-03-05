@@ -41,6 +41,7 @@ type Props = {
   outfitItems: OutfitItem[];
   onAddSuggestion?: (suggestion: Suggestion) => void;
   addingIndex?: number | null;
+  country?: string | null;
 };
 
 const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex }: Props) => {

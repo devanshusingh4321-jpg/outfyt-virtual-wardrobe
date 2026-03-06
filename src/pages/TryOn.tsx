@@ -59,6 +59,7 @@ const TryOn = () => {
   const [sizeSimulation, setSizeSimulation] = useState("M");
   const [showOverlay, setShowOverlay] = useState(false);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
+  const [backImageUrl, setBackImageUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [colorOverrides, setColorOverrides] = useState<ColorOverrides>({});
   const [stylingOptions, setStylingOptions] = useState<StylingOptions>({});
@@ -158,6 +159,7 @@ const TryOn = () => {
     setGenerating(true);
     setShowOverlay(false);
     setCompositeUrl(null);
+    setBackImageUrl(null);
     setTryonSaved(false);
 
     try {
@@ -183,6 +185,7 @@ const TryOn = () => {
       const resultUrl = data.imageUrl || data.imageBase64;
       if (resultUrl) {
         setCompositeUrl(resultUrl);
+        setBackImageUrl(data.backImageUrl || null);
         setShowOverlay(true);
         toast({ title: "Try-on generated! ✨" });
       } else {
@@ -529,6 +532,7 @@ const TryOn = () => {
                   </h3>
                   <TryOn3DPreview
                     imageUrl={compositeUrl}
+                    backImageUrl={backImageUrl}
                     outfitName={selectedOutfit.name}
                   />
                 </div>

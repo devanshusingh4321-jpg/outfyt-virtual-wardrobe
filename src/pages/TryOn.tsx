@@ -159,6 +159,7 @@ const TryOn = () => {
     setGenerating(true);
     setShowOverlay(false);
     setCompositeUrl(null);
+    setBackImageUrl(null);
     setTryonSaved(false);
 
     try {

@@ -8,8 +8,9 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Upload, Camera, Shirt, Layers, Sparkles, X, Eye, Loader2, Save, Check
+  ArrowLeft, Upload, Camera, Shirt, Layers, Sparkles, X, Eye, Loader2, Save, Check, Download
 } from "lucide-react";
+import TryOn3DPreview from "@/components/TryOn3DPreview";
 import {
   Select,
   SelectContent,
@@ -519,6 +520,19 @@ const TryOn = () => {
                   )}
                 </Button>
               </div>
+
+              {/* 3D Rotating Preview */}
+              {compositeUrl && (
+                <div className="glass rounded-2xl p-6 space-y-4">
+                  <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    3D Preview
+                  </h3>
+                  <TryOn3DPreview
+                    imageUrl={compositeUrl}
+                    outfitName={selectedOutfit.name}
+                  />
+                </div>
+              )}
 
               {/* Outfit Items Overlay Grid */}
               <div className="glass rounded-2xl p-6 space-y-4">

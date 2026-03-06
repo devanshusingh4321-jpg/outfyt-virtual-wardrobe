@@ -532,6 +532,7 @@ const TryOn = () => {
                   </h3>
                   <TryOn3DPreview
                     imageUrl={compositeUrl}
+                    backImageUrl={backImageUrl}
                     outfitName={selectedOutfit.name}
                   />
                 </div>

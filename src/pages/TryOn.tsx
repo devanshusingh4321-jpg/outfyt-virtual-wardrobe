@@ -521,6 +521,19 @@ const TryOn = () => {
                 </Button>
               </div>
 
+              {/* 3D Rotating Preview */}
+              {compositeUrl && (
+                <div className="glass rounded-2xl p-6 space-y-4">
+                  <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    3D Preview
+                  </h3>
+                  <TryOn3DPreview
+                    imageUrl={compositeUrl}
+                    outfitName={selectedOutfit.name}
+                  />
+                </div>
+              )}
+
               {/* Outfit Items Overlay Grid */}
               <div className="glass rounded-2xl p-6 space-y-4">
                 <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">

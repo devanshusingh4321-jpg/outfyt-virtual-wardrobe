@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Upload, Camera, Shirt, Layers, Sparkles, X, Eye, Loader2, Save, Check, Download
 } from "lucide-react";
-import TryOn3DPreview from "@/components/TryOn3DPreview";
+
 import {
   Select,
   SelectContent,

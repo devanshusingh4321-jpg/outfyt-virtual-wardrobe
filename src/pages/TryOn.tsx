@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Upload, Camera, Shirt, Layers, Sparkles, X, Eye, Loader2, Save, Check, Download
 } from "lucide-react";
-import TryOn3DPreview from "@/components/TryOn3DPreview";
+
 import {
   Select,
   SelectContent,
@@ -59,7 +59,7 @@ const TryOn = () => {
   const [sizeSimulation, setSizeSimulation] = useState("M");
   const [showOverlay, setShowOverlay] = useState(false);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
-  const [backImageUrl, setBackImageUrl] = useState<string | null>(null);
+  
   const [generating, setGenerating] = useState(false);
   const [colorOverrides, setColorOverrides] = useState<ColorOverrides>({});
   const [stylingOptions, setStylingOptions] = useState<StylingOptions>({});
@@ -159,7 +159,7 @@ const TryOn = () => {
     setGenerating(true);
     setShowOverlay(false);
     setCompositeUrl(null);
-    setBackImageUrl(null);
+    
     setTryonSaved(false);
 
     try {
@@ -185,7 +185,7 @@ const TryOn = () => {
       const resultUrl = data.imageUrl || data.imageBase64;
       if (resultUrl) {
         setCompositeUrl(resultUrl);
-        setBackImageUrl(data.backImageUrl || null);
+        
         setShowOverlay(true);
         toast({ title: "Try-on generated! ✨" });
       } else {
@@ -524,19 +524,6 @@ const TryOn = () => {
                 </Button>
               </div>
 
-              {/* 3D Rotating Preview */}
-              {compositeUrl && (
-                <div className="glass rounded-2xl p-6 space-y-4">
-                  <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                    3D Preview
-                  </h3>
-                  <TryOn3DPreview
-                    imageUrl={compositeUrl}
-                    backImageUrl={backImageUrl}
-                    outfitName={selectedOutfit.name}
-                  />
-                </div>
-              )}
 
               {/* Outfit Items Overlay Grid */}
               <div className="glass rounded-2xl p-6 space-y-4">

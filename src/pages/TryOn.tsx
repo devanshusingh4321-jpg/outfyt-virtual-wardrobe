@@ -185,7 +185,7 @@ const TryOn = () => {
       const resultUrl = data.imageUrl || data.imageBase64;
       if (resultUrl) {
         setCompositeUrl(resultUrl);
-        setBackImageUrl(data.backImageUrl || null);
+        
         setShowOverlay(true);
         toast({ title: "Try-on generated! ✨" });
       } else {

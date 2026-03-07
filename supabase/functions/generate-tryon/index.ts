@@ -119,21 +119,20 @@ Deno.serve(async (req) => {
     const itemImages = (await Promise.all(fetchPromises)).filter(Boolean) as { base64: string; mime: string; name: string }[];
     const fitStyle = size === 'XS' || size === 'S' ? 'tight/fitted' : size === 'L' || size === 'XL' || size === 'XXL' ? 'loose/relaxed' : 'regular true-to-size';
 
-    console.log('Generating front + back views, items:', itemImages.length, 'size:', size);
+    console.log('Generating try-on, items:', itemImages.length, 'size:', size);
 
-    // Build shared image content (person photo + item refs)
-    const sharedImageContent: any[] = [
+    // Build image content (person photo + item refs)
+    const imageContent: any[] = [
       { type: 'image_url', image_url: { url: `data:${photo.mime};base64,${photo.base64}` } },
     ];
     for (let i = 0; i < itemImages.length; i++) {
-      sharedImageContent.push({ type: 'text', text: `Reference for item ${i + 1}: ${itemImages[i].name}` });
-      sharedImageContent.push({ type: 'image_url', image_url: { url: `data:${itemImages[i].mime};base64,${itemImages[i].base64}` } });
+      imageContent.push({ type: 'text', text: `Reference for item ${i + 1}: ${itemImages[i].name}` });
+      imageContent.push({ type: 'image_url', image_url: { url: `data:${itemImages[i].mime};base64,${itemImages[i].base64}` } });
     }
 
     const outfitList = itemDescriptions.map((d, i) => `• Item ${i + 1}: ${d}`).join('\n');
 
-    // ── FRONT VIEW PROMPT ──
-    const frontPrompt = `You are a hyper-realistic virtual try-on AI performing surgical clothing replacement.
+    const prompt = `You are a hyper-realistic virtual try-on AI performing surgical clothing replacement.
 
 ABSOLUTE RULES:
 1. Preserve the person's identity exactly: face, skin tone, hair, body shape, pose, expression.
@@ -146,37 +145,14 @@ ABSOLUTE RULES:
 TASK: Replace the person's current clothing with:
 ${outfitList}
 
-Show the FRONT VIEW of the person wearing this outfit. Keep everything except clothing identical.`;
+Keep everything except clothing identical.`;
 
-    // ── BACK VIEW PROMPT ──
-    const backPrompt = `You are a hyper-realistic virtual try-on AI. Generate the BACK VIEW of the same person from the input photo wearing the specified outfit.
+    const content: any[] = [{ type: 'text', text: prompt }, ...imageContent];
 
-ABSOLUTE RULES:
-1. Show the person from BEHIND (back of head, back of body) — as if the camera walked behind them.
-2. Same body shape, height, hair, skin tone as in the front photo.
-3. Same background/environment, same lighting conditions.
-4. Show the BACK of the outfit with realistic details: back pockets, seams, collar back, fabric texture.
-5. Natural posture consistent with their front pose.
-6. Fit: ${fitStyle} (size ${size}).
-7. Output must look like a real photograph taken from behind.
-
-OUTFIT:
-${outfitList}
-
-Generate the back view of this person wearing this outfit. Use the front photo as reference for body proportions and environment.`;
-
-    // Generate front and back in parallel
-    const frontContent: any[] = [{ type: 'text', text: frontPrompt }, ...sharedImageContent];
-    const backContent: any[] = [{ type: 'text', text: backPrompt }, ...sharedImageContent];
-
-    let frontB64: string | null = null;
-    let backB64: string | null = null;
+    let resultB64: string | null = null;
 
     try {
-      [frontB64, backB64] = await Promise.all([
-        callAI(apiKey, frontContent),
-        callAI(apiKey, backContent),
-      ]);
+      resultB64 = await callAI(apiKey, content);
     } catch (e: any) {
       if (e.message === 'AI_429') {
         return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded, please try again later.' }),
@@ -189,23 +165,16 @@ Generate the back view of this person wearing this outfit. Use the front photo a
       throw e;
     }
 
-    if (!frontB64) {
-      return new Response(JSON.stringify({ success: false, error: 'AI did not generate the front view. Try with a clearer full-body photo.' }),
+    if (!resultB64) {
+      return new Response(JSON.stringify({ success: false, error: 'AI did not generate the image. Try with a clearer full-body photo.' }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Upload images
-    const frontUrl = await uploadImage(supabase, user.id, frontB64, 'front');
-    const backUrl = backB64 ? await uploadImage(supabase, user.id, backB64, 'back') : null;
+    // Upload image
+    const imageUrl = await uploadImage(supabase, user.id, resultB64, 'result');
 
-    // Fallback: return base64 if upload fails
     const result: any = { success: true };
-    result.imageUrl = frontUrl || `data:image/jpeg;base64,${frontB64}`;
-    if (backUrl) {
-      result.backImageUrl = backUrl;
-    } else if (backB64) {
-      result.backImageUrl = `data:image/jpeg;base64,${backB64}`;
-    }
+    result.imageUrl = imageUrl || `data:image/jpeg;base64,${resultB64}`;
 
     return new Response(JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

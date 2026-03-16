@@ -268,8 +268,6 @@ const Index = () => {
   );
 };
 
-// Wrapper to consume MotionValue and pass to canvas
-import { useState, useEffect as useEff } from "react";
 
 const BokehWrapper = ({ progress }: { progress: ReturnType<typeof useTransform> }) => {
   const [val, setVal] = useState(0);

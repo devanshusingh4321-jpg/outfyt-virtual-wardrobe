@@ -272,7 +272,7 @@ const Index = () => {
 const BokehWrapper = ({ progress }: { progress: ReturnType<typeof useTransform> }) => {
   const [val, setVal] = useState(0);
 
-  useEff(() => {
+  useEffect(() => {
     return progress.on("change", (v: number) => setVal(v));
   }, [progress]);
 

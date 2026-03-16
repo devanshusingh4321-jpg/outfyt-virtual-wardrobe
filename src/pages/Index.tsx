@@ -268,27 +268,17 @@ const Index = () => {
   );
 };
 
-// Wrapper to consume MotionValue
+// Wrapper to consume MotionValue and pass to canvas
+import { useState, useEffect as useEff } from "react";
+
 const BokehWrapper = ({ progress }: { progress: ReturnType<typeof useTransform> }) => {
-  const val = useRef(0);
+  const [val, setVal] = useState(0);
 
-  return (
-    <motion.div style={{ position: "fixed", inset: 0, zIndex: 0 }}>
-      <ProgressConsumer progress={progress} />
-    </motion.div>
-  );
-};
-
-const ProgressConsumer = ({ progress }: { progress: ReturnType<typeof useTransform> }) => {
-  const [val, setVal] = React.useState(0);
-  
-  React.useEffect(() => {
+  useEff(() => {
     return progress.on("change", (v: number) => setVal(v));
   }, [progress]);
 
   return <GenerativeBokeh scrollProgress={val} />;
 };
-
-import React from "react";
 
 export default Index;

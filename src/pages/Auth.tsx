@@ -275,10 +275,7 @@ const Auth = () => {
               rotateY: [0, 5, 10],
               borderRadius: ["16px", "24px", "0px"],
             }}
-            transition={{
-              enter: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
-              exit: { duration: 1.2, ease: [0.22, 1, 0.36, 1] },
-            }}
+            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
           >
             {/* Vault header */}
             <motion.div

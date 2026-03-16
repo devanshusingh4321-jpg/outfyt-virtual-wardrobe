@@ -2,7 +2,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { Zap, Layers, Palette, Sparkles, Eye, ArrowRight, Link, Shirt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { lazy, Suspense, useRef } from "react";
+import { lazy, Suspense, useRef, useState, useEffect } from "react";
 import GenerativeBokeh from "@/components/landing/GenerativeBokeh";
 import CursorThread from "@/components/landing/CursorThread";
 import MorphingMuse from "@/components/landing/MorphingMuse";

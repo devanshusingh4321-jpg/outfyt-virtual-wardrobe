@@ -1,11 +1,12 @@
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Zap, Layers, Palette, Sparkles, Eye, ArrowRight, Link, Shirt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
-import BeforeAfterSlider from "@/components/BeforeAfterSlider";
-
-const HeroScene = lazy(() => import("@/components/HeroScene"));
+import { lazy, Suspense, useRef } from "react";
+import GenerativeBokeh from "@/components/landing/GenerativeBokeh";
+import CursorThread from "@/components/landing/CursorThread";
+import MorphingMuse from "@/components/landing/MorphingMuse";
+import FabricPlayground from "@/components/landing/FabricPlayground";
 
 const steps = [
   {
@@ -43,17 +44,17 @@ const fadeUp = {
 
 const Index = () => {
   const navigate = useNavigate();
+  const pageRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: pageRef });
+  const bokehProgress = useTransform(scrollYProgress, [0, 1], [0, 1]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-hidden">
-      {/* Cinematic animated background */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-30 animate-cinematic-bg"
-        style={{
-          background: "radial-gradient(ellipse at 20% 50%, hsl(var(--neon-blue) / 0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, hsl(var(--neon-blue) / 0.05) 0%, transparent 50%), radial-gradient(ellipse at 50% 80%, hsl(var(--neon-blue) / 0.04) 0%, transparent 50%)",
-          backgroundSize: "200% 200%",
-        }}
-      />
+    <div ref={pageRef} className="min-h-screen bg-background text-foreground overflow-hidden relative">
+      {/* Generative Bokeh Background */}
+      <BokehWrapper progress={bokehProgress} />
+
+      {/* Cursor Thread */}
+      <CursorThread />
 
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
@@ -72,12 +73,8 @@ const Index = () => {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-24 md:pt-44 md:pb-36">
-        <Suspense fallback={null}>
-          <HeroScene />
-        </Suspense>
-
+      {/* Hero Intro */}
+      <section className="relative pt-32 pb-12 md:pt-44 md:pb-20">
         <div className="container relative z-10 text-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -129,8 +126,11 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Morphing Muse - Scroll-based outfit transitions */}
+      <MorphingMuse />
+
       {/* 3-Step Flow */}
-      <section className="py-24 relative">
+      <section className="py-24 relative z-10">
         <div className="container">
           <motion.h2
             className="font-display text-3xl md:text-4xl font-bold text-center mb-4"
@@ -164,7 +164,7 @@ const Index = () => {
                 variants={fadeUp}
                 custom={i + 2}
               >
-                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-5 transition-colors duration-300 group-hover:bg-primary/20">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
                   <step.icon className="w-6 h-6 text-primary" />
                 </div>
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
@@ -178,42 +178,8 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="py-24 relative">
-        <div className="container">
-          <motion.h2
-            className="font-display text-3xl md:text-4xl font-bold text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={fadeUp}
-            custom={0}
-          >
-            Everything You Need to <span className="text-gradient">Drip Right</span>
-          </motion.h2>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
-            {features.map((f, i) => (
-              <motion.div
-                key={f.label}
-                className="glass-hover rounded-xl p-6"
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-50px" }}
-                variants={fadeUp}
-                custom={i}
-              >
-                <f.icon className="w-5 h-5 text-primary mb-3" />
-                <h3 className="font-display font-semibold mb-1">{f.label}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Before / After Section */}
-      <section className="py-24 relative">
+      {/* Fabric Playground + Features */}
+      <section className="py-24 relative z-10">
         <div className="container">
           <motion.h2
             className="font-display text-3xl md:text-4xl font-bold text-center mb-4"
@@ -223,38 +189,47 @@ const Index = () => {
             variants={fadeUp}
             custom={0}
           >
-            See the <span className="text-gradient">Transformation</span>
+            Feel the <span className="text-gradient">Digital Fabric</span>
           </motion.h2>
           <motion.p
-            className="text-muted-foreground text-center mb-12 max-w-md mx-auto"
+            className="text-muted-foreground text-center mb-16 max-w-md mx-auto"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={fadeUp}
             custom={1}
           >
-            Drag to compare — from everyday wear to a styled look.
+            Our real-time physics engine brings clothing to life.
           </motion.p>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-            variants={fadeUp}
-            custom={2}
-          >
-            <BeforeAfterSlider
-              beforeSrc="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=800&fit=crop"
-              afterSrc="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=600&h=800&fit=crop"
-              beforeLabel="Before"
-              afterLabel="Styled"
-            />
-          </motion.div>
+          <div className="flex flex-col lg:flex-row items-center gap-12 max-w-5xl mx-auto">
+            <div className="flex-shrink-0">
+              <FabricPlayground />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-5 flex-1">
+              {features.map((f, i) => (
+                <motion.div
+                  key={f.label}
+                  className="glass-hover rounded-xl p-6"
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: "-50px" }}
+                  variants={fadeUp}
+                  custom={i}
+                >
+                  <f.icon className="w-5 h-5 text-primary mb-3" />
+                  <h3 className="font-display font-semibold mb-1">{f.label}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-24">
+      <section className="py-24 relative z-10">
         <div className="container">
           <motion.div
             className="max-w-2xl mx-auto text-center glass rounded-3xl p-12 md:p-16 relative overflow-hidden"
@@ -283,7 +258,7 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/30 py-8">
+      <footer className="border-t border-border/30 py-8 relative z-10">
         <div className="container flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="font-display text-sm font-bold text-gradient">OUTFYT</span>
           <p className="text-xs text-muted-foreground">© 2026 OUTFYT. Build Your Drip.</p>
@@ -292,5 +267,28 @@ const Index = () => {
     </div>
   );
 };
+
+// Wrapper to consume MotionValue
+const BokehWrapper = ({ progress }: { progress: ReturnType<typeof useTransform> }) => {
+  const val = useRef(0);
+
+  return (
+    <motion.div style={{ position: "fixed", inset: 0, zIndex: 0 }}>
+      <ProgressConsumer progress={progress} />
+    </motion.div>
+  );
+};
+
+const ProgressConsumer = ({ progress }: { progress: ReturnType<typeof useTransform> }) => {
+  const [val, setVal] = React.useState(0);
+  
+  React.useEffect(() => {
+    return progress.on("change", (v: number) => setVal(v));
+  }, [progress]);
+
+  return <GenerativeBokeh scrollProgress={val} />;
+};
+
+import React from "react";
 
 export default Index;

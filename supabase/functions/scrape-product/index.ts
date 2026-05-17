@@ -99,13 +99,25 @@ async function resolveShortLink(url: string): Promise<string> {
 
     let finalUrl = resp.url || url;
 
-    // OneLink/AppsFlyer pages embed the real destination in JS — parse it from HTML
+    // AppsFlyer OneLink often redirects to a page with deep_link_value / af_dp query params
+    try {
+      const u = new URL(finalUrl);
+      const deepParam = u.searchParams.get('deep_link_value')
+        || u.searchParams.get('af_dp')
+        || u.searchParams.get('af_web_dp')
+        || u.searchParams.get('$desktop_url')
+        || u.searchParams.get('$fallback_url');
+      if (deepParam && /^https?:/i.test(deepParam)) {
+        return decodeURIComponent(deepParam);
+      }
+    } catch {}
+
+    // Fallback: parse embedded URL from HTML body
     if (finalUrl.includes('onelink.me') || finalUrl.includes('app.link')) {
       try {
         const html = await resp.text();
-        // Look for af_web_dp, $desktop_url, $fallback_url, etc.
         const patterns = [
-          /["'](?:af_web_dp|af_dp|\$desktop_url|\$fallback_url|\$ios_url|\$android_url|web_dp)["']\s*[:=]\s*["']([^"']+)["']/i,
+          /["'](?:af_web_dp|af_dp|\$desktop_url|\$fallback_url|\$ios_url|\$android_url|web_dp|deep_link_value)["']\s*[:=]\s*["']([^"']+)["']/i,
           /window\.location\.(?:href|replace)\s*\(?\s*["']([^"']+)["']/i,
           /<meta[^>]+http-equiv=["']refresh["'][^>]+url=([^"'>\s]+)/i,
         ];

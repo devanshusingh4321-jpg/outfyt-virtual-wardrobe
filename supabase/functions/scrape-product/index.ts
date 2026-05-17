@@ -69,6 +69,65 @@ Deno.serve(async (req) => {
   }
 });
 
+const SHORT_LINK_HOSTS = [
+  'onelink.me', 'bit.ly', 'amzn.to', 'a.co', 'tinyurl.com',
+  't.co', 'goo.gl', 'shor.by', 'lnk.to', 'mzn.to', 'sho.pe',
+  'zara.app.link', 'nike.app.link',
+];
+
+async function resolveShortLink(url: string): Promise<string> {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    const isShort = SHORT_LINK_HOSTS.some(h => host === h || host.endsWith('.' + h) || host.includes('onelink.me') || host.includes('app.link'));
+    if (!isShort) return url;
+
+    // Try HEAD with redirect follow
+    let resp: Response | null = null;
+    try {
+      resp = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+        },
+      });
+    } catch (e) {
+      console.warn('Short link fetch failed:', e);
+      return url;
+    }
+
+    let finalUrl = resp.url || url;
+
+    // OneLink/AppsFlyer pages embed the real destination in JS — parse it from HTML
+    if (finalUrl.includes('onelink.me') || finalUrl.includes('app.link')) {
+      try {
+        const html = await resp.text();
+        // Look for af_web_dp, $desktop_url, $fallback_url, etc.
+        const patterns = [
+          /["'](?:af_web_dp|af_dp|\$desktop_url|\$fallback_url|\$ios_url|\$android_url|web_dp)["']\s*[:=]\s*["']([^"']+)["']/i,
+          /window\.location\.(?:href|replace)\s*\(?\s*["']([^"']+)["']/i,
+          /<meta[^>]+http-equiv=["']refresh["'][^>]+url=([^"'>\s]+)/i,
+        ];
+        for (const re of patterns) {
+          const m = html.match(re);
+          if (m && m[1] && /^https?:/i.test(m[1])) {
+            finalUrl = decodeURIComponent(m[1]);
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse deep link HTML:', e);
+      }
+    }
+
+    return finalUrl;
+  } catch (e) {
+    console.warn('resolveShortLink error:', e);
+    return url;
+  }
+}
+
 async function attemptScrape(apiKey: string, url: string) {
   try {
     const response = await fetch('https://api.firecrawl.dev/v1/scrape', {

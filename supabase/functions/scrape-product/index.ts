@@ -33,6 +33,10 @@ Deno.serve(async (req) => {
 
     console.log('Scraping URL:', formattedUrl);
 
+    // Resolve short links / deep links (e.g. onelink.me, bit.ly, amzn.to, a.co)
+    formattedUrl = await resolveShortLink(formattedUrl);
+    console.log('Resolved URL:', formattedUrl);
+
     // Attempt 1: Direct scrape with extended timeout
     let data = await attemptScrape(apiKey, formattedUrl);
 

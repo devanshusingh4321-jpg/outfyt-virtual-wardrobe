@@ -13,6 +13,7 @@ import TryOn from "./pages/TryOn";
 import Closet from "./pages/Closet";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
+import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/try-on" element={<TryOn />} />
             <Route path="/closet" element={<Closet />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

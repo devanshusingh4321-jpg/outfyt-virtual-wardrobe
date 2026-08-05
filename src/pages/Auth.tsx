@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Mail, Lock, User, ArrowRight, Loader2, Shield, Fingerprint } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -131,6 +131,9 @@ const Auth = () => {
   const { session, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const rawNext = searchParams.get("next");
+  const nextPath = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -169,7 +172,7 @@ const Auth = () => {
     );
   }
 
-  if (session) return <Navigate to="/dashboard" replace />;
+  if (session) return <Navigate to={nextPath ?? "/dashboard"} replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,7 +206,7 @@ const Auth = () => {
           password,
           options: {
             data: { display_name: displayName },
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: nextPath ? `${window.location.origin}${nextPath}` : window.location.origin,
           },
         });
         if (error) throw error;

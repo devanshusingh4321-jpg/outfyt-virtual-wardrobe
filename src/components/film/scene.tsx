@@ -135,7 +135,7 @@ function Figure() {
     m.instanceMatrix.needsUpdate = true;
     m.instanceColor = new THREE.InstancedBufferAttribute(sample.col.slice(0, sample.count * 3), 3);
     m.instanceColor.needsUpdate = true;
-    m.material.needsUpdate = true;
+    (m.material as THREE.Material).needsUpdate = true;
   }, [sample]);
 
   useFrame(() => {

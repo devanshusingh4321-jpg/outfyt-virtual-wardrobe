@@ -14,6 +14,8 @@ import Closet from "./pages/Closet";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import OAuthConsent from "./pages/OAuthConsent";
+import BrandNewDay from "./pages/BrandNewDay";
+
 
 const queryClient = new QueryClient();
 

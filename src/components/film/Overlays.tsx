@@ -36,11 +36,12 @@ const Overlays = () => {
         const a = parseFloat(layer.dataset.a!);
         const b = parseFloat(layer.dataset.b!);
         const dir = layer.dataset.dir as "out" | "in";
+        const v = layer.dataset.axis === "p" ? S.p : S.sp;
         const span = b - a;
-        const o =
-          smoothstep(a, a + span * 0.28, S.sp) * (1 - smoothstep(b - span * 0.28, b, S.sp));
+        const o = smoothstep(a, a + span * 0.28, v) * (1 - smoothstep(b - span * 0.28, b, v));
         layer.style.opacity = String(o);
         layer.style.visibility = o < 0.01 ? "hidden" : "visible";
+
         if (o < 0.01) continue;
 
         const letters = layer.querySelectorAll<HTMLElement>("[data-l]");

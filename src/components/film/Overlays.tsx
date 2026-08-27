@@ -73,6 +73,8 @@ const Overlays = () => {
           data-a={cue.a}
           data-b={cue.b}
           data-dir={cue.dir}
+          data-axis={cue.axis ?? "sp"}
+
           className="absolute inset-0 flex items-center justify-center"
           style={{
             pointerEvents: "none",

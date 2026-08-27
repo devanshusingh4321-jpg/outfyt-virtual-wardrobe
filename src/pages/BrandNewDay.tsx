@@ -1,71 +1,121 @@
-import { Canvas } from "@react-three/fiber";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import Stage from "@/components/film/scene";
-import Overlays from "@/components/film/Overlays";
-import { S, ACT_AXIS, clamp01 } from "@/lib/film/core";
+import heroFilm from "@/assets/hero-film.mp4.asset.json";
 
-const TRACK_VH = 2200;
+type Cue = { text: string; a: number; b: number; size: string; hero?: boolean };
+
+// timings in seconds against the 10s loop
+const CUES: Cue[] = [
+  { text: "COME ON, COME ON, COME ON", a: 0.6, b: 3.4, size: "clamp(1.4rem,6vw,3rem)" },
+  { text: "OH, OH, OH, OH, OH", a: 3.6, b: 6.0, size: "clamp(1.4rem,6vw,3rem)" },
+  { text: "COME ON, COME ON", a: 6.1, b: 7.4, size: "clamp(1.3rem,5vw,2.6rem)" },
+  { text: "BRAND NEW DAY", a: 7.6, b: 10, size: "clamp(2.4rem,11vw,7rem)", hero: true },
+];
 
 const BrandNewDay = () => {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [mobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 720);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [t, setT] = useState(0);
 
   useEffect(() => {
-    S.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    // write p to a plain mutable object once per frame; React never re-renders
+    const v = videoRef.current;
+    if (!v) return;
+    v.play().catch(() => {});
     let raf = 0;
-    const read = () => {
-      const el = trackRef.current;
-      if (el) {
-        const total = el.scrollHeight - window.innerHeight;
-        S.p = clamp01(total > 0 ? window.scrollY / total : 0);
-        S.sp = clamp01(S.p / ACT_AXIS);
-      }
-      raf = requestAnimationFrame(read);
+    const tick = () => {
+      setT(v.currentTime);
+      raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(read);
-
-    const onMove = (e: PointerEvent) => {
-      S.mx = (e.clientX / window.innerWidth) * 2 - 1;
-      S.my = (e.clientY / window.innerHeight) * 2 - 1;
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("pointermove", onMove);
-    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, []);
 
+  // subtle beat pulse for the kinetic captions
+  const pulse = 1 + Math.sin(t * Math.PI * 2 * 2) * 0.018;
+
   return (
-    <div ref={trackRef} className="film-track" style={{ height: `${TRACK_VH}vh` }}>
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-8 md:py-5">
-        <span className="font-display text-lg md:text-xl font-bold tracking-tight" style={{ color: "hsl(var(--film-bone))" }}>
+    <main
+      className="relative h-[100svh] w-full overflow-hidden"
+      style={{ background: "hsl(var(--film-ink, 0 0% 4%))" }}
+    >
+      <video
+        ref={videoRef}
+        src={heroFilm.url}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        aria-label="OUTFYT brand film"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+
+      {/* cinematic grade: vignette + crimson lift */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(115% 85% at 50% 45%, transparent 30%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.9) 100%)",
+        }}
+      />
+
+      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 md:px-8 md:py-5">
+        <span
+          className="font-display text-lg md:text-xl font-bold tracking-tight"
+          style={{ color: "hsl(var(--film-bone, 40 20% 94%))" }}
+        >
           OUTFYT
         </span>
         <Link
           to="/auth"
           className="text-sm md:text-base font-medium underline-offset-4 hover:underline"
-          style={{ color: "hsl(var(--film-bone))" }}
+          style={{ color: "hsl(var(--film-bone, 40 20% 94%))" }}
         >
           Login / Sign up
         </Link>
       </header>
 
-      <div className="sticky top-0 h-[100svh] w-full overflow-hidden">
-        <Canvas
-          camera={{ position: [0, 10.5, 54], fov: 42, near: 0.1, far: 600 }}
-          dpr={mobile ? 1 : 1.5}
-          gl={{ antialias: !mobile, powerPreference: "high-performance" }}
-        >
-          <Suspense fallback={null}>
-            <Stage mobile={mobile} />
-          </Suspense>
-        </Canvas>
-        <Overlays />
+      {/* kinetic captions, left-aligned lower third */}
+      <div className="absolute inset-x-0 bottom-[14vh] z-20 px-6 md:px-12">
+        {CUES.map((c) => {
+          const span = c.b - c.a;
+          const fade = Math.min(0.45, span * 0.3);
+          const inO = Math.min(1, Math.max(0, (t - c.a) / fade));
+          const outO = Math.min(1, Math.max(0, (c.b - t) / fade));
+          const o = Math.min(inO, outO);
+          if (o <= 0.01) return null;
+          return (
+            <h1
+              key={c.text}
+              className="font-display font-extrabold uppercase leading-[0.95] tracking-tight"
+              style={{
+                position: "absolute",
+                left: 0,
+                bottom: 0,
+                fontSize: c.size,
+                color: "#fff",
+                opacity: o,
+                letterSpacing: c.hero ? "-0.02em" : "0.02em",
+                transform: `scale(${c.hero ? 1 : pulse}) translateY(${(1 - o) * 14}px)`,
+                textShadow: "0 0 40px rgba(220,30,50,0.35), 0 2px 24px rgba(0,0,0,0.6)",
+                maxWidth: "14ch",
+              }}
+            >
+              {c.text}
+            </h1>
+          );
+        })}
       </div>
-    </div>
+
+      {/* film grain */}
+      <div
+        className="pointer-events-none absolute inset-0 z-10 opacity-[0.07] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>\")",
+          backgroundSize: "180px 180px",
+        }}
+      />
+    </main>
   );
 };
 

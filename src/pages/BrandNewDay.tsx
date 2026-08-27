@@ -40,6 +40,19 @@ const BrandNewDay = () => {
 
   return (
     <div ref={trackRef} className="film-track" style={{ height: `${TRACK_VH}vh` }}>
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 md:px-8 md:py-5">
+        <span className="font-display text-lg md:text-xl font-bold tracking-tight" style={{ color: "hsl(var(--film-bone))" }}>
+          OUTFYT
+        </span>
+        <Link
+          to="/auth"
+          className="text-sm md:text-base font-medium underline-offset-4 hover:underline"
+          style={{ color: "hsl(var(--film-bone))" }}
+        >
+          Login / Sign up
+        </Link>
+      </header>
+
       <div className="sticky top-0 h-[100svh] w-full overflow-hidden">
         <Canvas
           camera={{ position: [0, 10.5, 54], fov: 42, near: 0.1, far: 600 }}

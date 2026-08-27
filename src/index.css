@@ -51,8 +51,21 @@
     --sidebar-accent-foreground: 210 20% 90%;
     --sidebar-border: 220 12% 14%;
     --sidebar-ring: 200 100% 50%;
+
+    /* BRAND NEW DAY film tokens (red-black ink system) */
+    --film-ink-950: 354 68% 5%;
+    --film-ink-900: 354 63% 7%;
+    --film-ink-800: 354 52% 12%;
+    --film-ink-700: 354 44% 18%;
+    --film-bone: 220 8% 95%;
+    --film-bone-400: 350 6% 57%;
+    --film-bone-500: 350 6% 43%;
+    --film-scarlet-500: 357 75% 50%;
+    --film-scarlet-300: 357 100% 68%;
+    --film-cobalt-500: 229 66% 49%;
   }
 }
+
 
 @layer base {
   * {
@@ -61,7 +74,9 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
+
 
   body {
     @apply bg-background text-foreground font-sans antialiased;

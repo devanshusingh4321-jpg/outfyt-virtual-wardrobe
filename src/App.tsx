@@ -14,6 +14,8 @@ import Closet from "./pages/Closet";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import OAuthConsent from "./pages/OAuthConsent";
+import BrandNewDay from "./pages/BrandNewDay";
+
 
 const queryClient = new QueryClient();
 
@@ -25,7 +27,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<BrandNewDay />} />
+            <Route path="/home" element={<Index />} />
+
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/measurements" element={<Measurements />} />

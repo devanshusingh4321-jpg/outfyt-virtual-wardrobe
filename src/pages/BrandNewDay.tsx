@@ -1,5 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import Stage from "@/components/film/scene";
 import Overlays from "@/components/film/Overlays";
 import { S, ACT_AXIS, clamp01 } from "@/lib/film/core";

@@ -4,20 +4,22 @@ import { S, smoothstep, clamp01 } from "@/lib/film/core";
 /* Copy: two phrases, repeated, and nothing else but the title. */
 type Cue = {
   text: string;
-  a: number; // open on the ACT axis
+  a: number; // open on the ACT axis (or real p when axis === "p")
   b: number;
   dir: "out" | "in"; // openings leave back-to-front, closings arrive front-to-back
   size: string;
+  axis?: "sp" | "p";
 };
 
 const CUES: Cue[] = [
-  { text: "BRAND NEW DAY", a: 0.02, b: 0.2, dir: "out", size: "clamp(2.2rem,9vw,7rem)" },
+  { text: "BRAND NEW DAY", a: -0.06, b: 0.2, dir: "out", size: "clamp(2.2rem,9vw,7rem)" },
   { text: "IT COMES BACK", a: 0.17, b: 0.33, dir: "out", size: "clamp(1.1rem,4vw,2.6rem)" },
   { text: "NOTHING HELD", a: 0.34, b: 0.5, dir: "in", size: "clamp(1.1rem,4vw,2.6rem)" },
   { text: "IT COMES BACK", a: 0.52, b: 0.68, dir: "out", size: "clamp(1.1rem,4vw,2.6rem)" },
   { text: "NOTHING HELD", a: 0.68, b: 0.84, dir: "in", size: "clamp(1.1rem,4vw,2.6rem)" },
-  { text: "BRAND NEW DAY", a: 0.86, b: 1.0, dir: "in", size: "clamp(2rem,8vw,6rem)" },
+  { text: "BRAND NEW DAY", a: 0.78, b: 1.06, dir: "in", size: "clamp(2rem,8vw,6rem)", axis: "p" },
 ];
+
 
 const Overlays = () => {
   const rootRef = useRef<HTMLDivElement>(null);

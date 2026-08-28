@@ -25,6 +25,29 @@ const BrandNewDay = () => {
   const [videoSrc, setVideoSrc] = useState(getFilmSource);
   const [videoReady, setVideoReady] = useState(false);
 
+  useEffect(() => {
+    const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
+    if (!isLocalPreview) return;
+
+    let objectUrl: string | undefined;
+    const loadLocalFilm = async () => {
+      try {
+        const response = await fetch(`${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}`);
+        if (!response.ok) return;
+        const film = await response.blob();
+        objectUrl = URL.createObjectURL(film);
+        setVideoSrc(objectUrl);
+      } catch {
+        // Keep the direct CDN source as a fallback if the Blob load is unavailable.
+      }
+    };
+
+    void loadLocalFilm();
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, []);
+
   const handleVideoError = () => {
     const fallbackSource = `${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}`;
     if (videoSrc !== fallbackSource) setVideoSrc(fallbackSource);

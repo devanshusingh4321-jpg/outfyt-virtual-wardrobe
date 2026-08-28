@@ -12,14 +12,55 @@ const CUES: Cue[] = [
   { text: "BRAND NEW DAY", a: 7.6, b: 10, size: "clamp(2.4rem,11vw,7rem)", hero: true },
 ];
 
+const PUBLISHED_ASSET_ORIGIN = "https://outfyt-virtually.lovable.app";
+
+const getFilmSource = () => {
+  const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
+  return isLocalPreview ? `${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}` : heroFilm.url;
+};
+
 const BrandNewDay = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [t, setT] = useState(0);
+  const [videoSrc, setVideoSrc] = useState(getFilmSource);
+  const [videoReady, setVideoReady] = useState(false);
+
+  useEffect(() => {
+    const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
+    if (!isLocalPreview) return;
+
+    let objectUrl: string | undefined;
+    const loadLocalFilm = async () => {
+      try {
+        const response = await fetch(`${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}`);
+        if (!response.ok) return;
+        const film = await response.blob();
+        objectUrl = URL.createObjectURL(film);
+        setVideoSrc(objectUrl);
+      } catch {
+        // Keep the direct CDN source as a fallback if the Blob load is unavailable.
+      }
+    };
+
+    void loadLocalFilm();
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, []);
+
+  const handleVideoError = () => {
+    const fallbackSource = `${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}`;
+    if (videoSrc !== fallbackSource) setVideoSrc(fallbackSource);
+  };
+
+  const handleVideoReady = () => {
+    setVideoReady(true);
+    videoRef.current?.play().catch(() => {});
+  };
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    v.play().catch(() => {});
     let raf = 0;
     const tick = () => {
       setT(v.currentTime);
@@ -39,14 +80,16 @@ const BrandNewDay = () => {
     >
       <video
         ref={videoRef}
-        src={heroFilm.url}
+        src={videoSrc}
         autoPlay
         loop
         muted
         playsInline
         preload="auto"
         aria-label="OUTFYT brand film"
-        className="absolute inset-0 h-full w-full object-cover"
+        onCanPlay={handleVideoReady}
+        onError={handleVideoError}
+        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${videoReady ? "opacity-100" : "opacity-0"}`}
       />
 
       {/* cinematic grade: vignette + crimson lift */}

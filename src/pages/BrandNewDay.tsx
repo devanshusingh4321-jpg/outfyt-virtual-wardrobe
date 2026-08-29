@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import heroFilm from "@/assets/hero-film.mp4.asset.json";
+import heroFilmWebm from "@/assets/hero-film.webm.asset.json";
 import heroFilmPoster from "@/assets/hero-film-poster.jpg.asset.json";
 
 type Cue = { text: string; a: number; b: number; size: string; hero?: boolean };
@@ -92,7 +93,7 @@ const BrandNewDay = () => {
         onError={handleVideoError}
         className="absolute inset-0 h-full w-full object-cover transition-opacity duration-700"
       >
-        <source src={getAssetSource("/__l5e/assets-v1/06b2d9f3-249e-42ca-aecc-3eb7c7467cbe/hero-film.webm")} type="video/webm" />
+        <source src={getAssetSource(heroFilmWebm.url)} type="video/webm" />
         <source src={videoSrc} type="video/mp4" />
       </video>
 

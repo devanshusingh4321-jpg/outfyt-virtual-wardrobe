@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import heroFilm from "@/assets/hero-film.mp4.asset.json";
+import heroFilmPoster from "@/assets/hero-film-poster.jpg.asset.json";
 
 type Cue = { text: string; a: number; b: number; size: string; hero?: boolean };
 
@@ -86,6 +87,7 @@ const BrandNewDay = () => {
         muted
         playsInline
         preload="auto"
+        poster={`${PUBLISHED_ASSET_ORIGIN}${heroFilmPoster.url}`}
         aria-label="OUTFYT brand film"
         onCanPlay={handleVideoReady}
         onError={handleVideoError}

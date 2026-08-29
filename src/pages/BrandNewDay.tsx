@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import heroFilm from "@/assets/hero-film.mp4.asset.json";
+import heroFilmWebm from "@/assets/hero-film.webm.asset.json";
+import heroFilmPoster from "@/assets/hero-film-poster.jpg.asset.json";
 
 type Cue = { text: string; a: number; b: number; size: string; hero?: boolean };
 
@@ -14,15 +16,15 @@ const CUES: Cue[] = [
 
 const PUBLISHED_ASSET_ORIGIN = "https://outfyt-virtually.lovable.app";
 
-const getFilmSource = () => {
+const getAssetSource = (assetUrl: string) => {
   const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
-  return isLocalPreview ? `${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}` : heroFilm.url;
+  return isLocalPreview ? `${PUBLISHED_ASSET_ORIGIN}${assetUrl}` : assetUrl;
 };
 
 const BrandNewDay = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [t, setT] = useState(0);
-  const [videoSrc, setVideoSrc] = useState(getFilmSource);
+  const [videoSrc, setVideoSrc] = useState(() => getAssetSource(heroFilm.url));
   const [videoReady, setVideoReady] = useState(false);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ const BrandNewDay = () => {
   }, []);
 
   const handleVideoError = () => {
-    const fallbackSource = `${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}`;
+    const fallbackSource = getAssetSource(heroFilm.url);
     if (videoSrc !== fallbackSource) setVideoSrc(fallbackSource);
   };
 
@@ -80,17 +82,20 @@ const BrandNewDay = () => {
     >
       <video
         ref={videoRef}
-        src={videoSrc}
         autoPlay
         loop
         muted
         playsInline
         preload="auto"
+        poster={getAssetSource(heroFilmPoster.url)}
         aria-label="OUTFYT brand film"
         onCanPlay={handleVideoReady}
         onError={handleVideoError}
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${videoReady ? "opacity-100" : "opacity-0"}`}
-      />
+        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-700"
+      >
+        <source src={getAssetSource(heroFilmWebm.url)} type="video/webm" />
+        <source src={videoSrc} type="video/mp4" />
+      </video>
 
       {/* cinematic grade: vignette + crimson lift */}
       <div

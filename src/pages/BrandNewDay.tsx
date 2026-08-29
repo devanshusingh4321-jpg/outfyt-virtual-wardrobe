@@ -15,15 +15,15 @@ const CUES: Cue[] = [
 
 const PUBLISHED_ASSET_ORIGIN = "https://outfyt-virtually.lovable.app";
 
-const getFilmSource = () => {
+const getAssetSource = (assetUrl: string) => {
   const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
-  return isLocalPreview ? `${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}` : heroFilm.url;
+  return isLocalPreview ? `${PUBLISHED_ASSET_ORIGIN}${assetUrl}` : assetUrl;
 };
 
 const BrandNewDay = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [t, setT] = useState(0);
-  const [videoSrc, setVideoSrc] = useState(getFilmSource);
+  const [videoSrc, setVideoSrc] = useState(() => getAssetSource(heroFilm.url));
   const [videoReady, setVideoReady] = useState(false);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ const BrandNewDay = () => {
   }, []);
 
   const handleVideoError = () => {
-    const fallbackSource = `${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}`;
+    const fallbackSource = getAssetSource(heroFilm.url);
     if (videoSrc !== fallbackSource) setVideoSrc(fallbackSource);
   };
 
@@ -81,18 +81,20 @@ const BrandNewDay = () => {
     >
       <video
         ref={videoRef}
-        src={videoSrc}
         autoPlay
         loop
         muted
         playsInline
         preload="auto"
-        poster={`${PUBLISHED_ASSET_ORIGIN}${heroFilmPoster.url}`}
+        poster={getAssetSource(heroFilmPoster.url)}
         aria-label="OUTFYT brand film"
         onCanPlay={handleVideoReady}
         onError={handleVideoError}
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${videoReady ? "opacity-100" : "opacity-0"}`}
-      />
+        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-700"
+      >
+        <source src={getAssetSource("/__l5e/assets-v1/06b2d9f3-249e-42ca-aecc-3eb7c7467cbe/hero-film.webm")} type="video/webm" />
+        <source src={videoSrc} type="video/mp4" />
+      </video>
 
       {/* cinematic grade: vignette + crimson lift */}
       <div

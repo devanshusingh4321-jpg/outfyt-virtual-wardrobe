@@ -88,9 +88,9 @@ const Dashboard = () => {
       <div className="container py-8 space-y-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="font-display text-2xl font-bold">Your Drip Dashboard 🔥</h1>
+            <h1 className="font-display text-2xl font-bold">Your Friendly Neighborhood Dashboard 🕸️</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Add products, build outfits, and get smart size recommendations.
+              Sling together your fits — add products, build outfits, and let your spidey sense pick the size.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -121,13 +121,13 @@ const Dashboard = () => {
               Your Outfits ({outfits.length})
             </h2>
             <Button onClick={() => navigate("/outfit/new")} size="sm" className="glow-purple bg-primary hover:bg-primary/90 font-display gap-1.5">
-              <Plus className="w-4 h-4" /> New Outfit
+              <Plus className="w-4 h-4" /> New Look 🕸️
             </Button>
           </div>
           {outfits.length === 0 ? (
             <div className="glass rounded-2xl p-8 text-center">
               <Layers className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No outfits yet. Create one to mix and match your pieces!</p>
+              <p className="text-sm text-muted-foreground">Your spidey sense is tingling — no looks yet. Sling one together!</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

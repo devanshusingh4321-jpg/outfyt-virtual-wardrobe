@@ -99,10 +99,10 @@ const AddProduct = () => {
       <div className="glass rounded-2xl p-8">
         <h2 className="font-display text-xl font-semibold mb-2 flex items-center gap-2">
           <Link2 className="w-5 h-5 text-primary" />
-          Paste a Product Link
+          Web-sling a Product Link
         </h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Amazon, Zara, Nike, H&M, Myntra — we handle it all.
+          Amazon, Zara, Nike, H&M, Myntra — we've got you, no matter where you shop.
         </p>
         <form onSubmit={handleScrape} className="flex gap-3">
           <Input
@@ -123,7 +123,7 @@ const AddProduct = () => {
       {loading && (
         <div className="glass rounded-2xl p-12 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Scraping and analyzing product...</p>
+          <p className="text-muted-foreground">Web-slinging your data…</p>
           <p className="text-xs text-muted-foreground mt-1">This may take a few seconds</p>
         </div>
       )}

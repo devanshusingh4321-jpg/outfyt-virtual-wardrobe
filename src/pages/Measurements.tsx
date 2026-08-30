@@ -99,7 +99,7 @@ const Measurements = () => {
           Body Measurements
         </h2>
         <p className="text-sm text-muted-foreground mb-6">
-          One-time setup for smart size recommendations across all brands.
+          One-time setup so your suit always fits — no wardrobe malfunctions.
         </p>
 
         <form onSubmit={handleSave} className="space-y-5">
@@ -169,7 +169,7 @@ const Measurements = () => {
           </div>
 
           <Button type="submit" disabled={saving} className="w-full glow-purple bg-primary hover:bg-primary/90 font-display h-11 gap-2">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save Settings</>}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Lock In My Fit</>}
           </Button>
         </form>
       </div>

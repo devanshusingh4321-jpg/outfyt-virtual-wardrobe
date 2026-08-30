@@ -242,10 +242,10 @@ const TryOn = () => {
       <div className="container py-8 space-y-8 max-w-4xl">
         <div>
           <h1 className="font-display text-2xl font-bold flex items-center gap-2">
-            <Eye className="w-6 h-6 text-primary" /> Virtual Try-On
+            <Eye className="w-6 h-6 text-primary" /> Suit Up
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload your photo, select an outfit, and see how it looks on you.
+            Upload a photo, pick your gear, and see your new look in action.
           </p>
         </div>
 
@@ -273,7 +273,7 @@ const TryOn = () => {
             >
               <Upload className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors" />
               <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors font-display">
-                {uploading ? "Uploading..." : "Click to upload a full-body photo"}
+                {uploading ? "Web-slinging your photo…" : "Drop your photo here, Peter Parker style"}
               </span>
               <span className="text-xs text-muted-foreground">JPG, PNG — Max 5MB</span>
             </button>
@@ -297,7 +297,7 @@ const TryOn = () => {
           {loadingOutfits ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground ml-2">Loading outfits...</span>
+              <span className="text-sm text-muted-foreground ml-2">Web-slinging your looks…</span>
             </div>
           ) : outfits.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">

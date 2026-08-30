@@ -132,7 +132,7 @@ const Closet = () => {
             <Shirt className="w-6 h-6 text-primary" /> Your Closet
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {items.length} items saved — browse, filter, and manage your wardrobe.
+            {items.length} items saved — your gear, ready when duty calls.
           </p>
         </div>
 
@@ -172,7 +172,7 @@ const Closet = () => {
             className="cursor-pointer"
             onClick={() => setFilter("all")}
           >
-            All ({items.length})
+            🕸️ All ({items.length})
           </Badge>
           {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
             <Badge
@@ -191,7 +191,7 @@ const Closet = () => {
           <div className="glass rounded-2xl p-12 text-center">
             <Shirt className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
-              {items.length === 0 ? "Your closet is empty. Add products from the dashboard!" : "No items match your search."}
+              {items.length === 0 ? "Your spidey sense is tingling — nothing here yet. Add products from the dashboard!" : "No items match your search."}
             </p>
           </div>
         ) : viewMode === "grid" ? (

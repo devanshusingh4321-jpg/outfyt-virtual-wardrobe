@@ -19,7 +19,7 @@ const LoadingOverlay = () => (
     </div>
 
     <p className="font-display text-lg text-muted-foreground tracking-wide">
-      Styling you with AI
+      Web-slinging your look with AI
       <span className="inline-flex ml-1">
         <span className="animate-pulse" style={{ animationDelay: "0s" }}>.</span>
         <span className="animate-pulse" style={{ animationDelay: "0.3s" }}>.</span>

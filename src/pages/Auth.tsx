@@ -317,7 +317,7 @@ const Auth = () => {
               >
                 <div className="h-px w-8 bg-gradient-to-r from-transparent to-primary/30" />
                 <span className="text-[11px] text-muted-foreground tracking-[0.25em] uppercase font-display">
-                  {forgotMode ? "Identity Recovery" : isLogin ? "Secure Vault Access" : "Create Your Vault"}
+                  {forgotMode ? "Identity Recovery" : isLogin ? "With Great Power Comes Great Responsibility" : "Create Your Vault"}
                 </span>
                 <div className="h-px w-8 bg-gradient-to-l from-transparent to-primary/30" />
               </motion.div>
@@ -457,7 +457,7 @@ const Auth = () => {
                       onClick={() => setForgotMode(true)}
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors tracking-wide"
                     >
-                      Lost your passphrase? <span className="text-primary font-medium">Recover access</span>
+                      Lost your spidey sense? <span className="text-primary font-medium">Recover access</span>
                     </button>
                   </motion.div>
                 )}
@@ -473,9 +473,9 @@ const Auth = () => {
                     onClick={() => { setIsLogin(!isLogin); setForgotMode(false); }}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors tracking-wide"
                   >
-                    {forgotMode ? "Back to " : isLogin ? "No vault yet? " : "Already have a vault? "}
+                    {forgotMode ? "Back to " : isLogin ? "New to the web? " : "Already have a vault? "}
                     <span className="text-primary font-medium">
-                      {forgotMode ? "Vault access" : isLogin ? "Create one" : "Unlock it"}
+                      {forgotMode ? "Vault access" : isLogin ? "Sling up" : "Unlock it"}
                     </span>
                   </button>
                 </motion.div>

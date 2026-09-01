@@ -92,7 +92,7 @@ const Measurements = () => {
   }
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div className="webbed-page max-w-xl mx-auto">
       <div className="glass rounded-2xl p-8">
         <h2 className="font-display text-xl font-semibold mb-2 flex items-center gap-2">
           <Ruler className="w-5 h-5 text-primary" />

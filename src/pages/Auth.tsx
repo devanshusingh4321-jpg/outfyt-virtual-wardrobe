@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Mail, Lock, User, ArrowRight, Loader2, Shield, Fingerprint } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Loader2, Shield, Bug } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Floating abstract shape component
@@ -225,12 +225,12 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="webbed-page min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Deep background gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at 50% 40%, hsl(var(--neon-blue) / 0.04) 0%, transparent 60%)",
+          background: "radial-gradient(ellipse at 50% 40%, hsl(var(--film-scarlet-500) / 0.06) 0%, hsl(var(--film-cobalt-500) / 0.03) 42%, transparent 68%)",
         }}
       />
 
@@ -251,7 +251,7 @@ const Auth = () => {
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
-          backgroundImage: `linear-gradient(hsl(var(--neon-blue) / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--neon-blue) / 0.3) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(hsl(var(--film-scarlet-500) / 0.22) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--film-cobalt-500) / 0.22) 1px, transparent 1px)`,
           backgroundSize: "60px 60px",
         }}
       />
@@ -302,7 +302,7 @@ const Auth = () => {
                 }}
                 transition={{ duration: 3, repeat: Infinity }}
               >
-                <Fingerprint className="w-7 h-7 text-primary" />
+                <Bug className="w-7 h-7 text-primary" />
               </motion.div>
 
               <a href="/" className="font-display text-2xl font-bold text-gradient inline-block">
@@ -510,7 +510,7 @@ const Auth = () => {
                 animate={{ rotate: [0, 360] }}
                 transition={{ duration: 1 }}
               >
-                <Fingerprint className="w-16 h-16 text-primary mx-auto" />
+                <Bug className="w-16 h-16 text-primary mx-auto" />
               </motion.div>
               <p className="font-display text-sm text-primary mt-4 tracking-[0.3em] uppercase">
                 Identity Verified

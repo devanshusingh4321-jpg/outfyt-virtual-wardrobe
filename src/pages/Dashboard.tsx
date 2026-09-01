@@ -63,7 +63,7 @@ const Dashboard = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="webbed-page min-h-screen">
       {/* Nav */}
       <nav className="border-b border-border/50 glass sticky top-0 z-50">
         <div className="container flex items-center justify-between h-16">

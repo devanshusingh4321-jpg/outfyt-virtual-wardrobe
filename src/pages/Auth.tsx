@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Mail, Lock, User, ArrowRight, Loader2, Shield, Fingerprint } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Loader2, Shield, Bug } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Floating abstract shape component
+// Floating web-light shape component
 const FloatingShape = ({ delay, x, y, size, rotation }: { delay: number; x: string; y: string; size: number; rotation: number }) => (
   <motion.div
     className="absolute pointer-events-none"
@@ -34,7 +34,7 @@ const FloatingShape = ({ delay, x, y, size, rotation }: { delay: number; x: stri
   </motion.div>
 );
 
-// DNA-strand-like pattern shapes
+// Web-strand pattern shapes
 const StrandShape = ({ delay, startX, startY }: { delay: number; startX: string; startY: string }) => (
   <motion.div
     className="absolute pointer-events-none"
@@ -65,7 +65,7 @@ const StrandShape = ({ delay, startX, startY }: { delay: number; startX: string;
   </motion.div>
 );
 
-// ID Pulse effect
+// Web pulse effect
 const IdPulse = ({ active }: { active: boolean }) => (
   <AnimatePresence>
     {active && (
@@ -102,7 +102,7 @@ const IdPulse = ({ active }: { active: boolean }) => (
   </AnimatePresence>
 );
 
-// Laser sweep scanning line
+// Suit-up scanning line
 const LaserSweep = ({ active }: { active: boolean }) => (
   <AnimatePresence>
     {active && (
@@ -152,7 +152,7 @@ const Auth = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="webbed-page min-h-screen flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -165,7 +165,7 @@ const Auth = () => {
             <Shield className="w-8 h-8 text-primary" />
           </motion.div>
           <span className="text-sm text-muted-foreground font-display tracking-widest uppercase">
-            Verifying Identity
+            Suiting You Up
           </span>
         </motion.div>
       </div>
@@ -186,8 +186,8 @@ const Auth = () => {
         });
         if (error) throw error;
         setScanning(false);
-        toast({
-          title: "Secure link sent",
+          toast({
+            title: "Reset link sent",
           description: "Check your email for the reset link.",
         });
         return;
@@ -199,7 +199,7 @@ const Auth = () => {
         // Trigger the unfolding animation
         setAuthenticated(true);
         await new Promise((r) => setTimeout(r, 1200));
-        toast({ title: "Identity Verified ✓" });
+        toast({ title: "You're in ✓" });
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -212,25 +212,25 @@ const Auth = () => {
         if (error) throw error;
         setScanning(false);
         toast({
-          title: "Vault access pending",
-          description: "Check your email to verify your identity.",
+          title: "Almost on the web",
+          description: "Check your email to finish signing up.",
         });
       }
     } catch (error: any) {
       setScanning(false);
-      toast({ title: "Access Denied", description: error.message, variant: "destructive" });
+      toast({ title: "Something went wrong", description: error.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="webbed-page min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Deep background gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at 50% 40%, hsl(var(--neon-blue) / 0.04) 0%, transparent 60%)",
+          background: "radial-gradient(ellipse at 50% 40%, hsl(var(--film-scarlet-500) / 0.06) 0%, hsl(var(--film-cobalt-500) / 0.03) 42%, transparent 68%)",
         }}
       />
 
@@ -251,7 +251,7 @@ const Auth = () => {
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
-          backgroundImage: `linear-gradient(hsl(var(--neon-blue) / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--neon-blue) / 0.3) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(hsl(var(--film-scarlet-500) / 0.22) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--film-cobalt-500) / 0.22) 1px, transparent 1px)`,
           backgroundSize: "60px 60px",
         }}
       />
@@ -266,7 +266,7 @@ const Auth = () => {
       <AnimatePresence mode="wait">
         {!authenticated ? (
           <motion.div
-            key="vault"
+            key="web-access"
             className="w-full max-w-md relative z-10"
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -280,7 +280,7 @@ const Auth = () => {
             }}
             transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* Vault header */}
+            {/* Web-slinger header */}
             <motion.div
               className="text-center mb-8"
               initial={{ opacity: 0, y: -20 }}
@@ -302,7 +302,7 @@ const Auth = () => {
                 }}
                 transition={{ duration: 3, repeat: Infinity }}
               >
-                <Fingerprint className="w-7 h-7 text-primary" />
+                <Bug className="w-7 h-7 text-primary" />
               </motion.div>
 
               <a href="/" className="font-display text-2xl font-bold text-gradient inline-block">
@@ -317,13 +317,13 @@ const Auth = () => {
               >
                 <div className="h-px w-8 bg-gradient-to-r from-transparent to-primary/30" />
                 <span className="text-[11px] text-muted-foreground tracking-[0.25em] uppercase font-display">
-                  {forgotMode ? "Identity Recovery" : isLogin ? "With Great Power Comes Great Responsibility" : "Create Your Vault"}
+                  {forgotMode ? "Find Your Way Back" : isLogin ? "With Great Power Comes Great Responsibility" : "Join the Web"}
                 </span>
                 <div className="h-px w-8 bg-gradient-to-l from-transparent to-primary/30" />
               </motion.div>
             </motion.div>
 
-            {/* Frosted Obsidian form container */}
+             {/* Frosted form container */}
             <motion.div
               ref={formRef}
               className="relative rounded-2xl overflow-hidden"
@@ -376,7 +376,7 @@ const Auth = () => {
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
                     <Input
                       type="email"
-                      placeholder="Secure email"
+                       placeholder="Your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       onFocus={() => setEmailFocused(true)}
@@ -401,7 +401,7 @@ const Auth = () => {
                           <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
                             type="password"
-                            placeholder="Vault passphrase"
+                             placeholder="Your password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             onKeyDown={handleKeyDown}
@@ -418,7 +418,7 @@ const Auth = () => {
                     <Button
                       type="submit"
                       disabled={submitting}
-                      className="w-full h-12 rounded-xl font-display gap-2 text-sm tracking-wide relative overflow-hidden group"
+                       className="w-full h-12 rounded-full font-display gap-2 text-sm tracking-wide relative overflow-hidden group"
                       style={{
                         background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--neon-blue) / 0.8))",
                         boxShadow: "0 0 30px hsl(var(--neon-blue) / 0.2), 0 4px 20px hsl(var(--neon-blue) / 0.15)",
@@ -436,7 +436,7 @@ const Auth = () => {
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <>
-                            {forgotMode ? "Send Recovery Link" : isLogin ? "Unlock Vault" : "Initialize Vault"}
+                            {forgotMode ? "Send Reset Link" : isLogin ? "Suit Up" : "Sling Up"}
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                           </>
                         )}
@@ -457,7 +457,7 @@ const Auth = () => {
                       onClick={() => setForgotMode(true)}
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors tracking-wide"
                     >
-                      Lost your spidey sense? <span className="text-primary font-medium">Recover access</span>
+                      Lost your spidey sense? <span className="text-primary font-medium">Find your way back</span>
                     </button>
                   </motion.div>
                 )}
@@ -473,15 +473,15 @@ const Auth = () => {
                     onClick={() => { setIsLogin(!isLogin); setForgotMode(false); }}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors tracking-wide"
                   >
-                    {forgotMode ? "Back to " : isLogin ? "New to the web? " : "Already have a vault? "}
+                    {forgotMode ? "Back to " : isLogin ? "New to the web? " : "Already on the web? "}
                     <span className="text-primary font-medium">
-                      {forgotMode ? "Vault access" : isLogin ? "Sling up" : "Unlock it"}
+                      {forgotMode ? "Suit up" : isLogin ? "Sling up" : "Suit up"}
                     </span>
                   </button>
                 </motion.div>
               </div>
 
-              {/* Bottom security badge */}
+              {/* Bottom web-slinger badge */}
               <div
                 className="px-8 py-3 flex items-center justify-center gap-2"
                 style={{
@@ -489,9 +489,9 @@ const Auth = () => {
                   background: "hsl(var(--card) / 0.3)",
                 }}
               >
-                <Shield className="w-3 h-3 text-primary/60" />
+                <Bug className="w-3 h-3 text-primary/60" />
                 <span className="text-[10px] text-muted-foreground/60 tracking-[0.2em] uppercase font-display">
-                  End-to-end encrypted
+                  Built for web-slingers
                 </span>
               </div>
             </motion.div>
@@ -510,10 +510,10 @@ const Auth = () => {
                 animate={{ rotate: [0, 360] }}
                 transition={{ duration: 1 }}
               >
-                <Fingerprint className="w-16 h-16 text-primary mx-auto" />
+                <Bug className="w-16 h-16 text-primary mx-auto" />
               </motion.div>
               <p className="font-display text-sm text-primary mt-4 tracking-[0.3em] uppercase">
-                Identity Verified
+                 Suit Up Complete
               </p>
             </div>
           </motion.div>

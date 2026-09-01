@@ -113,7 +113,7 @@ const AddProduct = () => {
             className="bg-secondary/50 border-border/50 h-11 flex-1"
             required
           />
-          <Button type="submit" disabled={loading} className="glow-purple bg-primary hover:bg-primary/90 font-display h-11 px-6">
+          <Button type="submit" disabled={loading} className="glow-purple font-display h-11 px-6">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" /> Extract</>}
           </Button>
         </form>

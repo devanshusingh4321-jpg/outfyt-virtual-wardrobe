@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Mail, Lock, User, ArrowRight, Loader2, Shield, Bug } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Loader2, Bug } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Floating web-light shape component
@@ -162,7 +162,7 @@ const Auth = () => {
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
           >
-            <Shield className="w-8 h-8 text-primary" />
+            <Bug className="w-8 h-8 text-primary" />
           </motion.div>
           <span className="text-sm text-muted-foreground font-display tracking-widest uppercase">
             Suiting You Up

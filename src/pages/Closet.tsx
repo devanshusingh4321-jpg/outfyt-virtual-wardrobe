@@ -58,6 +58,20 @@ const Closet = () => {
   const [deleteTarget, setDeleteTarget] = useState<ClothingItem | null>(null);
   const [deletingTryon, setDeletingTryon] = useState<string | null>(null);
 
+  const getTryonPath = (imageUrl: string | null) => {
+    if (!imageUrl) return null;
+    if (!imageUrl.startsWith("http")) return imageUrl;
+
+    const publicMarker = "/storage/v1/object/public/tryon-photos/";
+    const signedMarker = "/storage/v1/object/sign/tryon-photos/";
+    const marker = imageUrl.includes(publicMarker) ? publicMarker : signedMarker;
+    const markerIndex = imageUrl.indexOf(marker);
+    if (markerIndex === -1) return null;
+
+    const pathWithQuery = imageUrl.slice(markerIndex + marker.length);
+    return decodeURIComponent(pathWithQuery.split("?")[0]);
+  };
+
   useEffect(() => {
     if (!user) return;
     supabase
@@ -73,7 +87,16 @@ const Closet = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(100)
-      .then(({ data }) => setTryonPhotos(data || []));
+      .then(async ({ data }) => {
+        const rows = data || [];
+        const hydrated = await Promise.all(rows.map(async (row) => {
+          const path = getTryonPath(row.image_url);
+          if (!path) return row;
+          const { data: signed } = await supabase.storage.from("tryon-photos").createSignedUrl(path, 3600);
+          return { ...row, image_url: signed?.signedUrl || row.image_url };
+        }));
+        setTryonPhotos(hydrated);
+      });
   }, [user]);
 
   const deleteTryonPhoto = async (id: string) => {

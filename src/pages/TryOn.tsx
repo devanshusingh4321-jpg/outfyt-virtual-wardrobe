@@ -59,6 +59,7 @@ const TryOn = () => {
   const [sizeSimulation, setSizeSimulation] = useState("M");
   const [showOverlay, setShowOverlay] = useState(false);
   const [compositeUrl, setCompositeUrl] = useState<string | null>(null);
+  const [compositePath, setCompositePath] = useState<string | null>(null);
   
   const [generating, setGenerating] = useState(false);
   const [colorOverrides, setColorOverrides] = useState<ColorOverrides>({});
@@ -142,8 +143,11 @@ const TryOn = () => {
       const { error } = await supabase.storage.from("tryon-photos").upload(path, file);
       if (error) throw error;
 
-      const { data: urlData } = supabase.storage.from("tryon-photos").getPublicUrl(path);
-      setPhoto(urlData.publicUrl);
+      const { data: urlData, error: signedUrlError } = await supabase.storage
+        .from("tryon-photos")
+        .createSignedUrl(path, 3600);
+      if (signedUrlError || !urlData?.signedUrl) throw signedUrlError || new Error("Could not prepare the uploaded photo");
+      setPhoto(urlData.signedUrl);
       setShowOverlay(false);
       setCompositeUrl(null);
       toast({ title: "Photo uploaded! 📸" });
@@ -159,6 +163,7 @@ const TryOn = () => {
     setGenerating(true);
     setShowOverlay(false);
     setCompositeUrl(null);
+    setCompositePath(null);
     
     setTryonSaved(false);
 
@@ -185,6 +190,7 @@ const TryOn = () => {
       const resultUrl = data.imageUrl || data.imageBase64;
       if (resultUrl) {
         setCompositeUrl(resultUrl);
+        setCompositePath(data.imagePath || null);
         
         setShowOverlay(true);
         toast({ title: "Try-on generated! ✨" });
@@ -203,7 +209,7 @@ const TryOn = () => {
     try {
       const { error } = await supabase.from("tryon_photos").insert({
         user_id: user.id,
-        image_url: compositeUrl,
+        image_url: compositePath || compositeUrl,
         outfit_id: selectedOutfit.id,
         outfit_name: selectedOutfit.name,
         size: sizeSimulation,

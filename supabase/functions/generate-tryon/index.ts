@@ -55,13 +55,19 @@ async function callAI(apiKey: string, content: any[]): Promise<string | null> {
   return null;
 }
 
-async function uploadImage(supabase: any, userId: string, b64: string, suffix: string): Promise<string | null> {
+async function uploadImage(supabase: any, userId: string, b64: string, suffix: string): Promise<{ path: string; signedUrl: string } | null> {
   const bytes = base64ToBytes(b64);
   const path = `${userId}/tryon-${suffix}-${Date.now()}.jpg`;
   const { error } = await supabase.storage.from('tryon-photos').upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
   if (error) { console.error('Upload error:', error); return null; }
-  const { data } = supabase.storage.from('tryon-photos').getPublicUrl(path);
-  return data.publicUrl;
+  const { data, error: signedUrlError } = await supabase.storage
+    .from('tryon-photos')
+    .createSignedUrl(path, 3600);
+  if (signedUrlError || !data?.signedUrl) {
+    console.error('Signed URL error:', signedUrlError);
+    return null;
+  }
+  return { path, signedUrl: data.signedUrl };
 }
 
 Deno.serve(async (req) => {
@@ -171,10 +177,11 @@ Keep everything except clothing identical.`;
     }
 
     // Upload image
-    const imageUrl = await uploadImage(supabase, user.id, resultB64, 'result');
+    const uploadedImage = await uploadImage(supabase, user.id, resultB64, 'result');
 
     const result: any = { success: true };
-    result.imageUrl = imageUrl || `data:image/jpeg;base64,${resultB64}`;
+    result.imageUrl = uploadedImage?.signedUrl || `data:image/jpeg;base64,${resultB64}`;
+    result.imagePath = uploadedImage?.path || null;
 
     return new Response(JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });

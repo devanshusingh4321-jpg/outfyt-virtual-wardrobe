@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
-        display: ["Space Grotesk", "sans-serif"],
+        sans: ["IBM Plex Sans", "sans-serif"],
+        display: ["Libre Baskerville", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -50,11 +50,6 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
-        },
-        neon: {
-          purple: "hsl(var(--neon-purple))",
-          blue: "hsl(var(--neon-blue))",
-          pink: "hsl(var(--neon-pink))",
         },
         surface: {
           DEFAULT: "hsl(var(--surface))",

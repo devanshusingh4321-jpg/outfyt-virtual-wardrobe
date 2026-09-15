@@ -7,25 +7,14 @@ const LoadingOverlay = () => (
     exit={{ opacity: 0 }}
     transition={{ duration: 0.6 }}
   >
-    {/* Shimmer bar */}
-    <div className="w-64 h-1 rounded-full bg-muted overflow-hidden mb-8">
+    <div className="mb-8 h-px w-64 overflow-hidden bg-border">
       <div
-        className="h-full w-1/2 rounded-full animate-shimmer"
-        style={{
-          background: "linear-gradient(90deg, transparent, hsl(var(--neon-blue) / 0.6), transparent)",
-          backgroundSize: "200% 100%",
-        }}
+        className="h-full w-1/2 animate-shimmer bg-primary"
       />
     </div>
 
-    <p className="font-display text-lg text-muted-foreground tracking-wide">
-      Web-slinging your look with AI
-      <span className="inline-flex ml-1">
-        <span className="animate-pulse" style={{ animationDelay: "0s" }}>.</span>
-        <span className="animate-pulse" style={{ animationDelay: "0.3s" }}>.</span>
-        <span className="animate-pulse" style={{ animationDelay: "0.6s" }}>.</span>
-      </span>
-    </p>
+    <p className="eyebrow">Creating your try-on</p>
+    <p className="mt-3 max-w-xs text-center text-sm text-muted-foreground">This uses the real AI request and may take a moment.</p>
   </motion.div>
 );
 

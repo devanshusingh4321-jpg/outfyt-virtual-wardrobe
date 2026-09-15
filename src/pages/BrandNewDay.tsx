@@ -1,170 +1,76 @@
-import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowRight, Check, ImagePlus, Layers3, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import heroFilm from "@/assets/hero-film.mp4.asset.json";
-import heroFilmWebm from "@/assets/hero-film.webm.asset.json";
-import heroFilmPoster from "@/assets/hero-film-poster.jpg.asset.json";
+import { Button } from "@/components/ui/button";
+import EditorialNav from "@/components/EditorialNav";
+import editorialHero from "@/assets/outfyt-editorial-hero.jpg.asset.json";
 
-type Cue = { text: string; a: number; b: number; size: string; hero?: boolean };
-
-// timings in seconds against the 10s loop
-const CUES: Cue[] = [
-  { text: "COME ON, COME ON, COME ON", a: 0.6, b: 3.4, size: "clamp(1.4rem,6vw,3rem)" },
-  { text: "OH, OH, OH, OH, OH", a: 3.6, b: 6.0, size: "clamp(1.4rem,6vw,3rem)" },
-  { text: "COME ON, COME ON", a: 6.1, b: 7.4, size: "clamp(1.3rem,5vw,2.6rem)" },
-  { text: "BRAND NEW DAY", a: 7.6, b: 10, size: "clamp(2.4rem,11vw,7rem)", hero: true },
+const workflow = [
+  { number: "01", icon: ImagePlus, title: "Upload your photo", copy: "Choose a clear, full-body photo. Your image stays private and is used only for your try-on." },
+  { number: "02", icon: Layers3, title: "Select an outfit", copy: "Build a look from products saved to your closet, then choose the size and available styling options." },
+  { number: "03", icon: Sparkles, title: "Generate your preview", copy: "Run the real AI try-on, compare before and after, then save the result to your closet." },
 ];
 
-const PUBLISHED_ASSET_ORIGIN = "https://outfyt-virtually.lovable.app";
-
-const getAssetSource = (assetUrl: string) => {
-  const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
-  return isLocalPreview ? `${PUBLISHED_ASSET_ORIGIN}${assetUrl}` : assetUrl;
+const reveal = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (index: number) => ({ opacity: 1, y: 0, transition: { delay: index * 0.1, duration: 0.5, ease: "easeOut" as const } }),
 };
 
-const BrandNewDay = () => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [t, setT] = useState(0);
-  const [videoSrc, setVideoSrc] = useState(() => getAssetSource(heroFilm.url));
-  const [videoReady, setVideoReady] = useState(false);
+const BrandNewDay = () => (
+  <main className="editorial-page overflow-hidden">
+    <EditorialNav />
 
-  useEffect(() => {
-    const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
-    if (!isLocalPreview) return;
-
-    let objectUrl: string | undefined;
-    const loadLocalFilm = async () => {
-      try {
-        const response = await fetch(`${PUBLISHED_ASSET_ORIGIN}${heroFilm.url}`);
-        if (!response.ok) return;
-        const film = await response.blob();
-        objectUrl = URL.createObjectURL(film);
-        setVideoSrc(objectUrl);
-      } catch {
-        // Keep the direct CDN source as a fallback if the Blob load is unavailable.
-      }
-    };
-
-    void loadLocalFilm();
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, []);
-
-  const handleVideoError = () => {
-    const fallbackSource = getAssetSource(heroFilm.url);
-    if (videoSrc !== fallbackSource) setVideoSrc(fallbackSource);
-  };
-
-  const handleVideoReady = () => {
-    setVideoReady(true);
-    videoRef.current?.play().catch(() => {});
-  };
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    let raf = 0;
-    const tick = () => {
-      setT(v.currentTime);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  // subtle beat pulse for the kinetic captions
-  const pulse = 1 + Math.sin(t * Math.PI * 2 * 2) * 0.018;
-
-  return (
-    <main
-      className="relative h-[100svh] w-full overflow-hidden"
-      style={{ background: "hsl(var(--film-ink, 0 0% 4%))" }}
-    >
-      <video
-        ref={videoRef}
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        poster={getAssetSource(heroFilmPoster.url)}
-        aria-label="OUTFYT brand film"
-        onCanPlay={handleVideoReady}
-        onError={handleVideoError}
-        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-700"
-      >
-        <source src={getAssetSource(heroFilmWebm.url)} type="video/webm" />
-        <source src={videoSrc} type="video/mp4" />
-      </video>
-
-      {/* cinematic grade: vignette + crimson lift */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(115% 85% at 50% 45%, transparent 30%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.9) 100%)",
-        }}
-      />
-
-      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 md:px-8 md:py-5">
-        <span
-          className="font-display text-lg md:text-xl font-bold tracking-tight"
-          style={{ color: "hsl(var(--film-bone, 40 20% 94%))" }}
-        >
-          OUTFYT
-        </span>
-        <Link
-          to="/auth"
-          className="text-sm md:text-base font-medium underline-offset-4 hover:underline"
-          style={{ color: "hsl(var(--film-bone, 40 20% 94%))" }}
-        >
-          Login / Sign up
-        </Link>
-      </header>
-
-      {/* kinetic captions, left-aligned lower third */}
-      <div className="absolute inset-x-0 bottom-[14vh] z-20 px-6 md:px-12">
-        {CUES.map((c) => {
-          const span = c.b - c.a;
-          const fade = Math.min(0.45, span * 0.3);
-          const inO = Math.min(1, Math.max(0, (t - c.a) / fade));
-          const outO = Math.min(1, Math.max(0, (c.b - t) / fade));
-          const o = Math.min(inO, outO);
-          if (o <= 0.01) return null;
-          return (
-            <h1
-              key={c.text}
-              className="font-display font-extrabold uppercase leading-[0.95] tracking-tight"
-              style={{
-                position: "absolute",
-                left: 0,
-                bottom: 0,
-                fontSize: c.size,
-                color: "#fff",
-                opacity: o,
-                letterSpacing: c.hero ? "-0.02em" : "0.02em",
-                transform: `scale(${c.hero ? 1 : pulse}) translateY(${(1 - o) * 14}px)`,
-                textShadow: "0 0 40px rgba(220,30,50,0.35), 0 2px 24px rgba(0,0,0,0.6)",
-                maxWidth: "14ch",
-              }}
-            >
-              {c.text}
-            </h1>
-          );
-        })}
+    <section className="container grid min-h-[calc(100svh-4rem)] grid-cols-1 items-center gap-8 px-4 py-8 sm:px-8 md:grid-cols-12 md:py-12">
+      <div className="relative z-10 md:col-span-7 md:pr-8">
+        <motion.p custom={0} initial="hidden" animate="visible" variants={reveal} className="eyebrow mb-6">AI virtual try-on studio</motion.p>
+        <motion.h1 custom={1} initial="hidden" animate="visible" variants={reveal} className="max-w-[9ch] text-5xl font-normal leading-[0.98] sm:text-7xl lg:text-8xl">
+          Your next look. <span className="italic text-primary">Before you buy.</span>
+        </motion.h1>
+        <motion.p custom={2} initial="hidden" animate="visible" variants={reveal} className="mt-7 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
+          Upload a photo, choose an outfit from your closet, and generate a private AI preview before making the purchase.
+        </motion.p>
+        <motion.div custom={3} initial="hidden" animate="visible" variants={reveal} className="mt-8 flex flex-wrap items-center gap-3">
+          <Button size="lg" asChild><Link to="/try-on">Try it on <ArrowRight /></Link></Button>
+          <Button size="lg" variant="outline" asChild><Link to="/auth">Sign in</Link></Button>
+        </motion.div>
       </div>
 
-      {/* film grain */}
-      <div
-        className="pointer-events-none absolute inset-0 z-10 opacity-[0.07] mix-blend-overlay"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>\")",
-          backgroundSize: "180px 180px",
-        }}
-      />
-    </main>
-  );
-};
+      <motion.figure initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, delay: 0.15 }} className="relative md:col-span-5">
+        <div className="overflow-hidden rounded-lg bg-secondary aspect-[4/5]">
+          <img src={editorialHero.url} alt="Editorial sample outfit with a charcoal blazer and ivory shirt" width={1440} height={1800} className="h-full w-full object-cover" />
+        </div>
+        <figcaption className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-3 rounded-md border border-background/60 bg-background/90 px-4 py-3 backdrop-blur-sm">
+          <div><p className="eyebrow text-foreground">Sample preview</p><p className="mt-1 text-xs text-muted-foreground">Editorial illustration, not a user result</p></div>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-accent-foreground"><Check className="h-4 w-4" /></span>
+        </figcaption>
+      </motion.figure>
+    </section>
+
+    <section id="how-it-works" className="border-y border-border bg-card py-20 sm:py-28">
+      <div className="container px-4 sm:px-8">
+        <div className="grid gap-10 md:grid-cols-12">
+          <div className="md:col-span-4">
+            <p className="eyebrow">How it works</p>
+            <h2 className="mt-4 max-w-[8ch] text-4xl font-normal leading-tight sm:text-5xl">From photo to fitting room.</h2>
+          </div>
+          <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border md:col-span-8 md:grid-cols-3">
+            {workflow.map((step, index) => (
+              <motion.article key={step.number} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.35 }} custom={index} variants={reveal} className="bg-card p-6 sm:p-8">
+                <div className="flex items-center justify-between"><span className="eyebrow">{step.number}</span><step.icon className="h-5 w-5 text-primary" /></div>
+                <h3 className="mt-16 text-xl font-normal">{step.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{step.copy}</p>
+              </motion.article>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section className="container grid gap-8 px-4 py-20 sm:px-8 sm:py-28 md:grid-cols-12 md:items-end">
+      <div className="md:col-span-8"><p className="eyebrow">Your private fitting room</p><h2 className="mt-4 text-4xl font-normal sm:text-6xl">See the outfit on you, then decide.</h2></div>
+      <div className="md:col-span-4 md:text-right"><Button size="lg" asChild><Link to="/try-on">Open try-on <ArrowRight /></Link></Button></div>
+    </section>
+  </main>
+);
 
 export default BrandNewDay;

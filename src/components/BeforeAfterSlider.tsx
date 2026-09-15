@@ -42,7 +42,12 @@ const BeforeAfterSlider = ({
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-[3/4] max-w-lg mx-auto rounded-2xl overflow-hidden select-none cursor-col-resize glass"
+      className="editorial-card relative mx-auto aspect-[3/4] w-full max-w-lg cursor-col-resize select-none overflow-hidden rounded-lg"
+      role="slider"
+      aria-label="Compare original photo and try-on result"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(position)}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -62,11 +67,11 @@ const BeforeAfterSlider = ({
 
       {/* Divider line */}
       <div
-        className="absolute top-0 bottom-0 w-0.5 bg-primary shadow-[0_0_12px_hsl(var(--neon-blue)/0.6)]"
+        className="absolute bottom-0 top-0 w-0.5 bg-primary"
         style={{ left: `${position}%`, transform: "translateX(-50%)" }}
       >
         {/* Handle */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-primary/90 backdrop-blur border-2 border-primary-foreground flex items-center justify-center glow-blue transition-shadow duration-300 hover:shadow-[0_0_25px_hsl(var(--neon-blue)/0.6)]">
+        <div className="absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-primary-foreground bg-primary text-primary-foreground shadow-md">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M5 3L2 8L5 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M11 3L14 8L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -75,10 +80,10 @@ const BeforeAfterSlider = ({
       </div>
 
       {/* Labels */}
-      <span className="absolute top-3 left-3 text-[10px] font-display font-semibold uppercase tracking-wider bg-background/60 backdrop-blur-xl px-2.5 py-1 rounded-md border border-border/20">
+      <span className="absolute left-3 top-3 rounded-md border border-border bg-background/90 px-2.5 py-1 text-[10px] font-semibold uppercase">
         {beforeLabel}
       </span>
-      <span className="absolute top-3 right-3 text-[10px] font-display font-semibold uppercase tracking-wider bg-background/60 backdrop-blur-xl px-2.5 py-1 rounded-md border border-border/20">
+      <span className="absolute right-3 top-3 rounded-md border border-border bg-background/90 px-2.5 py-1 text-[10px] font-semibold uppercase">
         {afterLabel}
       </span>
     </div>

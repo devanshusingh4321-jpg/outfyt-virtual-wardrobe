@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import EditorialNav from "@/components/EditorialNav";
 
 const Measurements = () => {
   const { user, loading: authLoading } = useAuth();
@@ -85,24 +86,26 @@ const Measurements = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div className="editorial-page flex items-center justify-center py-16">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="webbed-page min-h-screen p-4">
-      <div className="max-w-xl mx-auto glass rounded-2xl p-8">
-        <h2 className="font-display text-xl font-semibold mb-2 flex items-center gap-2">
+    <div className="editorial-page">
+      <EditorialNav authenticated backTo="/dashboard" />
+      <main className="mx-auto max-w-2xl px-4 py-10 sm:px-8 sm:py-14">
+        <p className="eyebrow">Fit profile</p>
+        <h1 className="mt-3 flex items-center gap-3 text-4xl font-normal">
           <Ruler className="w-5 h-5 text-primary" />
           Body Measurements
-        </h2>
-        <p className="text-sm text-muted-foreground mb-6">
-          One-time setup so your suit always fits — no wardrobe malfunctions.
+        </h1>
+        <p className="mt-3 mb-8 text-sm leading-6 text-muted-foreground">
+          Add your measurements once to improve size recommendations across saved products.
         </p>
 
-        <form onSubmit={handleSave} className="space-y-5">
+        <form onSubmit={handleSave} className="editorial-card space-y-5 rounded-lg p-6 sm:p-8">
           {/* Country */}
           <div>
             <label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
@@ -152,27 +155,24 @@ const Measurements = () => {
             <label className="text-xs text-muted-foreground mb-2 block">Fit Preference</label>
             <div className="grid grid-cols-3 gap-2">
               {["tight", "regular", "relaxed"].map((pref) => (
-                <button
+                <Button
                   key={pref}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, fit_preference: pref }))}
-                  className={`rounded-lg py-2.5 text-sm font-medium capitalize transition-all ${
-                    form.fit_preference === pref
-                      ? "bg-primary text-primary-foreground glow-purple"
-                      : "glass hover:bg-surface-hover"
-                  }`}
+                  variant={form.fit_preference === pref ? "default" : "outline"}
+                  className="capitalize"
                 >
                   {pref}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
 
-          <Button type="submit" disabled={saving} className="w-full glow-purple bg-primary hover:bg-primary/90 font-display h-11 gap-2">
+          <Button type="submit" disabled={saving} className="w-full h-11 gap-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Lock In My Fit</>}
           </Button>
         </form>
-      </div>
+      </main>
     </div>
   );
 };

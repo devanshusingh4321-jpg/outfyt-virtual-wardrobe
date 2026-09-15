@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import EditorialNav from "@/components/EditorialNav";
 
 type ClothingItem = {
   id: string;
@@ -150,7 +151,7 @@ const TryOn = () => {
       setPhoto(urlData.signedUrl);
       setShowOverlay(false);
       setCompositeUrl(null);
-      toast({ title: "Photo uploaded! 📸" });
+      toast({ title: "Photo uploaded" });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
@@ -193,7 +194,7 @@ const TryOn = () => {
         setCompositePath(data.imagePath || null);
         
         setShowOverlay(true);
-        toast({ title: "Try-on generated! ✨" });
+        toast({ title: "Try-on generated" });
       } else {
         throw new Error('No image returned');
       }
@@ -216,7 +217,7 @@ const TryOn = () => {
       });
       if (error) throw error;
       setTryonSaved(true);
-      toast({ title: "Try-on saved to your closet! 💾" });
+      toast({ title: "Try-on saved to your closet" });
     } catch (err: any) {
       toast({ title: "Failed to save", description: err.message, variant: "destructive" });
     } finally {
@@ -233,30 +234,22 @@ const TryOn = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div className="webbed-page min-h-screen">
-      {/* Nav */}
-      <nav className="border-b border-border/50 glass sticky top-0 z-50">
-        <div className="container flex items-center justify-between h-16">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-1.5 text-muted-foreground">
-            <ArrowLeft className="w-4 h-4" /> Dashboard
-          </Button>
-          <a href="/" className="font-display text-xl font-bold text-gradient">OUTFYT</a>
-          <div className="w-20" />
-        </div>
-      </nav>
+    <div className="editorial-page">
+      <EditorialNav authenticated backTo="/dashboard" />
 
-      <div className="container py-8 space-y-8 max-w-4xl">
+      <main className="container max-w-5xl space-y-8 px-4 py-10 sm:px-8 sm:py-14">
         <div>
-          <h1 className="font-display text-2xl font-bold flex items-center gap-2">
-            <Eye className="w-6 h-6 text-primary" /> Suit Up
+          <p className="eyebrow">Private virtual fitting room</p>
+          <h1 className="mt-3 flex items-center gap-3 text-4xl font-normal sm:text-5xl">
+            <Eye className="w-6 h-6 text-primary" /> Try on your next look
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload a photo, pick your gear, and see your new look in action.
+            Upload a clear photo, choose a saved outfit, and generate your AI preview.
           </p>
         </div>
 
         {/* Step 1: Upload Photo */}
-        <div className="glass rounded-2xl p-6 space-y-4">
+        <section className="editorial-card rounded-lg p-6 space-y-4">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <Camera className="w-4 h-4 text-primary" /> Step 1 — Upload Your Photo
           </h2>
@@ -279,7 +272,7 @@ const TryOn = () => {
             >
               <Upload className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors" />
               <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors font-display">
-                {uploading ? "Web-slinging your photo…" : "Drop your photo here, Peter Parker style"}
+                {uploading ? "Uploading your photo…" : "Upload a clear, full-body photo"}
               </span>
               <span className="text-xs text-muted-foreground">JPG, PNG — Max 5MB</span>
             </button>
@@ -292,10 +285,10 @@ const TryOn = () => {
             className="hidden"
             onChange={handleFileUpload}
           />
-        </div>
+        </section>
 
         {/* Step 2: Select Outfit */}
-        <div className="glass rounded-2xl p-6 space-y-4">
+        <section className="editorial-card rounded-lg p-6 space-y-4">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <Layers className="w-4 h-4 text-primary" /> Step 2 — Select an Outfit
           </h2>
@@ -303,7 +296,7 @@ const TryOn = () => {
           {loadingOutfits ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground ml-2">Web-slinging your looks…</span>
+              <span className="text-sm text-muted-foreground ml-2">Loading your outfits…</span>
             </div>
           ) : outfits.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
@@ -317,7 +310,7 @@ const TryOn = () => {
                   onClick={() => { setSelectedOutfit(outfit); setColorOverrides({}); setStylingOptions({}); }}
                   className={`rounded-xl p-4 text-left transition-all border ${
                     selectedOutfit?.id === outfit.id
-                      ? "border-primary bg-primary/10 glow-purple"
+                      ? "border-primary bg-accent/50 shadow-sm"
                       : "border-border/30 bg-secondary/20 hover:border-primary/50"
                   }`}
                 >
@@ -350,11 +343,11 @@ const TryOn = () => {
               ))}
             </div>
           )}
-        </div>
+        </section>
 
         {/* Step 2.5: Color Selection */}
         {selectedOutfit && selectedOutfit.items.some(i => i.colors && i.colors.length > 1) && (
-          <div className="glass rounded-2xl p-6 space-y-4">
+          <section className="editorial-card rounded-lg p-6 space-y-4">
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Shirt className="w-4 h-4 text-primary" /> Choose Colors
             </h2>
@@ -383,12 +376,12 @@ const TryOn = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Step 3: Styling Options */}
         {selectedOutfit && selectedOutfit.items.some(i => TUCKABLE_CATEGORIES.includes(i.category || '') || BUTTONABLE_CATEGORIES.includes(i.category || '')) && (
-          <div className="glass rounded-2xl p-6 space-y-4">
+          <section className="editorial-card rounded-lg p-6 space-y-4">
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Shirt className="w-4 h-4 text-primary" /> Styling Options
             </h2>
@@ -438,11 +431,11 @@ const TryOn = () => {
                   );
                 })}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Step 4: Size Simulation */}
-        <div className="glass rounded-2xl p-6 space-y-4">
+        <section className="editorial-card rounded-lg p-6 space-y-4">
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> Step {selectedOutfit && selectedOutfit.items.some(i => TUCKABLE_CATEGORIES.includes(i.category || '') || BUTTONABLE_CATEGORIES.includes(i.category || '')) ? "4" : "3"} — Size Simulation
           </h2>
@@ -478,13 +471,13 @@ const TryOn = () => {
               ? "Regular / true to size"
               : "Oversized / relaxed look"}
           </p>
-        </div>
+        </section>
 
         {/* Generate Try-On */}
         <Button
           onClick={generateOverlay}
           disabled={!photo || !selectedOutfit || generating}
-          className="w-full h-14 glow-purple bg-primary hover:bg-primary/90 font-display text-base gap-2"
+          className="w-full h-14 text-base gap-2"
         >
           {generating ? (
             <><Loader2 className="w-5 h-5 animate-spin" /> Generating AI Try-On...</>
@@ -503,7 +496,7 @@ const TryOn = () => {
               className="space-y-6"
             >
               {/* Before / After Slider */}
-              <div className="glass rounded-2xl p-6 space-y-4">
+              <section className="editorial-card rounded-lg p-6 space-y-4">
                 <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                   Before / After
                 </h3>
@@ -528,11 +521,11 @@ const TryOn = () => {
                     <><Save className="w-4 h-4" /> Save Try-On to Closet</>
                   )}
                 </Button>
-              </div>
+              </section>
 
 
               {/* Outfit Items Overlay Grid */}
-              <div className="glass rounded-2xl p-6 space-y-4">
+              <section className="editorial-card rounded-lg p-6 space-y-4">
                 <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                   Outfit Pieces — {selectedOutfit.name}
                 </h3>
@@ -567,12 +560,12 @@ const TryOn = () => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
 
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </main>
     </div>
   );
 };

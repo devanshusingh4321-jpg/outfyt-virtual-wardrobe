@@ -90,7 +90,7 @@ const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex, country }
         ) : (
           <Sparkles className="w-4 h-4" />
         )}
-        {loading ? "Analyzing your fit..." : "Complete The Fit ✨"}
+        {loading ? "Analyzing your outfit..." : "Complete the outfit"}
       </Button>
 
       <AnimatePresence>
@@ -103,7 +103,7 @@ const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex, country }
           >
             {/* Style Notes */}
             {result.style_notes && (
-              <div className="glass rounded-xl p-4">
+              <div className="editorial-card rounded-lg p-4">
                 <p className="text-xs uppercase tracking-widest text-accent mb-2 font-display">Style Notes</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">{result.style_notes}</p>
               </div>
@@ -117,7 +117,7 @@ const StyleSuggestions = ({ outfitItems, onAddSuggestion, addingIndex, country }
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="glass rounded-xl p-4 space-y-2"
+                  className="editorial-card rounded-lg p-4 space-y-2"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">

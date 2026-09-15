@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import EditorialNav from "@/components/EditorialNav";
 
 type ClothingItem = {
   id: string;
@@ -138,24 +139,17 @@ const Closet = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div className="webbed-page min-h-screen">
-      <nav className="border-b border-border/50 glass sticky top-0 z-50">
-        <div className="container flex items-center justify-between h-16">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-1.5 text-muted-foreground">
-            <ArrowLeft className="w-4 h-4" /> Dashboard
-          </Button>
-          <a href="/" className="font-display text-xl font-bold text-gradient">OUTFYT</a>
-          <div className="w-20" />
-        </div>
-      </nav>
+    <div className="editorial-page">
+      <EditorialNav authenticated backTo="/dashboard" />
 
-      <div className="container py-8 space-y-6 max-w-5xl">
+      <main className="container max-w-5xl space-y-8 px-4 py-10 sm:px-8 sm:py-14">
         <div>
-          <h1 className="font-display text-2xl font-bold flex items-center gap-2">
+          <p className="eyebrow">Saved pieces and previews</p>
+          <h1 className="mt-3 flex items-center gap-3 text-4xl font-normal">
             <Shirt className="w-6 h-6 text-primary" /> Your Closet
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {items.length} items saved — your gear, ready when duty calls.
+            {items.length} {items.length === 1 ? "item" : "items"} saved and ready to style.
           </p>
         </div>
 
@@ -195,7 +189,7 @@ const Closet = () => {
             className="cursor-pointer"
             onClick={() => setFilter("all")}
           >
-            🕸️ All ({items.length})
+            All ({items.length})
           </Badge>
           {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
             <Badge
@@ -211,10 +205,10 @@ const Closet = () => {
 
         {/* Items */}
         {filtered.length === 0 ? (
-          <div className="glass rounded-2xl p-12 text-center">
+          <div className="editorial-card rounded-lg p-12 text-center">
             <Shirt className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
-              {items.length === 0 ? "Your spidey sense is tingling — nothing here yet. Add products from the dashboard!" : "No items match your search."}
+              {items.length === 0 ? "Your closet is empty. Add a product from the studio to begin." : "No items match your search."}
             </p>
           </div>
         ) : viewMode === "grid" ? (
@@ -227,7 +221,7 @@ const Closet = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="glass rounded-xl overflow-hidden group relative"
+                  className="editorial-card-hover overflow-hidden rounded-lg group relative"
                 >
                   {item.image_url ? (
                     <div className="aspect-square bg-secondary/30 overflow-hidden">
@@ -292,7 +286,7 @@ const Closet = () => {
         ) : (
           <div className="space-y-2">
             {filtered.map((item) => (
-              <div key={item.id} className="glass rounded-xl p-4 flex items-center gap-4 group">
+              <div key={item.id} className="editorial-card rounded-lg p-4 flex items-center gap-4 group">
                 {item.image_url ? (
                   <img
                     src={item.image_url}
@@ -338,7 +332,7 @@ const Closet = () => {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {tryonPhotos.map((tp: any) => (
-                <div key={tp.id} className="glass rounded-xl overflow-hidden group relative">
+                <div key={tp.id} className="editorial-card-hover overflow-hidden rounded-lg group relative">
                   <div className="aspect-[3/4] bg-secondary/30 overflow-hidden">
                     <img
                       src={tp.image_url}
@@ -367,7 +361,7 @@ const Closet = () => {
             </div>
           </div>
         )}
-      </div>
+      </main>
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

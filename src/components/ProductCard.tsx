@@ -10,7 +10,7 @@ type Props = {
 
 const ProductCard = ({ product, onSave }: Props) => {
   return (
-    <div className="glass rounded-2xl overflow-hidden">
+    <article className="editorial-card overflow-hidden rounded-lg">
       {/* Image */}
       {product.image_url && (
         <div className="aspect-square max-h-72 overflow-hidden bg-secondary/30">
@@ -79,7 +79,7 @@ const ProductCard = ({ product, onSave }: Props) => {
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
-          <Button onClick={onSave} className="flex-1 glow-purple bg-primary hover:bg-primary/90 font-display gap-2">
+          <Button onClick={onSave} className="flex-1 gap-2">
             <Save className="w-4 h-4" /> Save to Closet
           </Button>
           <Button variant="outline" size="icon" asChild>
@@ -89,7 +89,7 @@ const ProductCard = ({ product, onSave }: Props) => {
           </Button>
         </div>
       </div>
-    </div>
+    </article>
   );
 };
 

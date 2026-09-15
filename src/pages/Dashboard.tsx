@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LogOut, Ruler, Shirt, Plus, Layers, Eye, Globe } from "lucide-react";
+import { Shirt, Plus, Layers, Globe } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import EditorialNav from "@/components/EditorialNav";
 
 const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
@@ -63,34 +64,16 @@ const Dashboard = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div className="webbed-page min-h-screen">
-      {/* Nav */}
-      <nav className="border-b border-border/50 glass sticky top-0 z-50">
-        <div className="container flex items-center justify-between h-16">
-          <a href="/" className="font-display text-xl font-bold text-gradient">OUTFYT</a>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/try-on")} className="gap-1.5 text-muted-foreground hover:text-foreground">
-              <Eye className="w-4 h-4" /> Try-On
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/closet")} className="gap-1.5 text-muted-foreground hover:text-foreground">
-              <Shirt className="w-4 h-4" /> Closet
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/measurements")} className="gap-1.5 text-muted-foreground hover:text-foreground">
-              <Ruler className="w-4 h-4" /> Measurements
-            </Button>
-            <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground">
-              <LogOut className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </nav>
+    <div className="editorial-page">
+      <EditorialNav authenticated onSignOut={signOut} />
 
-      <div className="container py-8 space-y-8">
+      <div className="container space-y-12 px-4 py-10 sm:px-8 sm:py-14">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="font-display text-2xl font-bold">Your Friendly Neighborhood Dashboard 🕸️</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Sling together your fits — add products, build outfits, and let your spidey sense pick the size.
+            <p className="eyebrow">Your studio</p>
+            <h1 className="mt-3 text-4xl font-normal sm:text-5xl">Build, preview, refine.</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Add products, build outfits, check fit guidance, and take your finished looks into the virtual fitting room.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -120,14 +103,14 @@ const Dashboard = () => {
               <Layers className="w-5 h-5 text-accent" />
               Your Outfits ({outfits.length})
             </h2>
-            <Button onClick={() => navigate("/outfit/new")} size="sm" className="glow-purple bg-primary hover:bg-primary/90 font-display gap-1.5">
-              <Plus className="w-4 h-4" /> New Look 🕸️
+            <Button onClick={() => navigate("/outfit/new")} size="sm">
+              <Plus /> New outfit
             </Button>
           </div>
           {outfits.length === 0 ? (
-            <div className="glass rounded-2xl p-8 text-center">
+            <div className="editorial-card rounded-lg p-10 text-center">
               <Layers className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Your spidey sense is tingling — no looks yet. Sling one together!</p>
+              <p className="text-sm text-muted-foreground">No outfits yet. Create one from pieces in your closet.</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -135,7 +118,7 @@ const Dashboard = () => {
                 <button
                   key={outfit.id}
                   onClick={() => navigate(`/outfit/${outfit.id}`)}
-                  className="glass rounded-xl p-5 text-left hover:border-primary/50 transition-colors group"
+                  className="editorial-card-hover rounded-lg p-5 text-left group"
                 >
                   <h3 className="font-display font-semibold group-hover:text-primary transition-colors">{outfit.name}</h3>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -156,7 +139,7 @@ const Dashboard = () => {
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {items.map((item) => (
-                <div key={item.id} className="glass rounded-xl overflow-hidden group">
+                <div key={item.id} className="editorial-card-hover overflow-hidden rounded-lg group">
                   {item.image_url && (
                     <div className="aspect-square bg-secondary/30 overflow-hidden">
                       <img

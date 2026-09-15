@@ -39,7 +39,7 @@ const AddProduct = () => {
         setProfile(prof);
       }
 
-      toast({ title: "Product extracted! 🔥" });
+      toast({ title: "Product extracted" });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -65,7 +65,7 @@ const AddProduct = () => {
       });
 
       if (error) throw error;
-      toast({ title: "Saved to your closet! 👕" });
+      toast({ title: "Saved to your closet" });
       setProduct(null);
       setUrl("");
     } catch (error: any) {
@@ -96,13 +96,13 @@ const AddProduct = () => {
   return (
     <div className="space-y-8">
       {/* URL Input */}
-      <div className="glass rounded-2xl p-8">
+      <section className="editorial-card rounded-lg p-6 sm:p-8">
         <h2 className="font-display text-xl font-semibold mb-2 flex items-center gap-2">
           <Link2 className="w-5 h-5 text-primary" />
-          Web-sling a Product Link
+          Add a product link
         </h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Amazon, Zara, Nike, H&M, Myntra — we've got you, no matter where you shop.
+          Paste a product page from a supported retailer to extract its details.
         </p>
         <form onSubmit={handleScrape} className="flex gap-3">
           <Input
@@ -113,17 +113,17 @@ const AddProduct = () => {
             className="bg-secondary/50 border-border/50 h-11 flex-1"
             required
           />
-          <Button type="submit" disabled={loading} className="glow-purple font-display h-11 px-6">
+          <Button type="submit" disabled={loading} className="h-11 px-6">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" /> Extract</>}
           </Button>
         </form>
-      </div>
+      </section>
 
       {/* Loading state */}
       {loading && (
-        <div className="glass rounded-2xl p-12 text-center">
+        <div className="editorial-card rounded-lg p-12 text-center" role="status" aria-live="polite">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Web-slinging your data…</p>
+          <p className="text-muted-foreground">Extracting product details…</p>
           <p className="text-xs text-muted-foreground mt-1">This may take a few seconds</p>
         </div>
       )}
@@ -140,14 +140,14 @@ const AddProduct = () => {
             />
           )}
           {!fitData && profile && Object.keys(product.size_chart).length === 0 && (
-            <div className="glass rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+            <div className="editorial-card rounded-lg p-8 flex flex-col items-center justify-center text-center">
               <ShoppingBag className="w-10 h-10 text-muted-foreground mb-3" />
               <p className="text-muted-foreground text-sm">No size chart found for this product.</p>
               <p className="text-xs text-muted-foreground mt-1">Fit scoring requires size chart data from the product page.</p>
             </div>
           )}
           {!profile?.chest && (
-            <div className="glass rounded-2xl p-8 flex flex-col items-center justify-center text-center">
+            <div className="editorial-card rounded-lg p-8 flex flex-col items-center justify-center text-center">
               <p className="text-muted-foreground text-sm">Set up your body measurements to see fit scores!</p>
               <a href="/measurements" className="text-primary text-sm mt-2 hover:underline">Set up measurements →</a>
             </div>

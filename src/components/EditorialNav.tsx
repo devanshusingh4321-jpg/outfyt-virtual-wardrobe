@@ -1,13 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, LogOut, Menu, Ruler, Shirt, X } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 type EditorialNavProps = {
   authenticated?: boolean;
   onSignOut?: () => void;
   backTo?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 };
 
 const EditorialNav = ({ authenticated = false, onSignOut, backTo, action }: EditorialNavProps) => {
@@ -45,14 +45,14 @@ const EditorialNav = ({ authenticated = false, onSignOut, backTo, action }: Edit
             </Button>
           ))}
           {authenticated && onSignOut && (
-            <Button variant="ghost" size="icon" onClick={onSignOut} aria-label="Sign out"><LogOut /></Button>
+              <Button variant="ghost" size="icon" className="min-h-11 min-w-11" onClick={onSignOut} aria-label="Sign out"><LogOut /></Button>
           )}
           {action ?? (!authenticated && <Button size="sm" asChild><Link to="/try-on">Try it on</Link></Button>)}
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
           {action}
-          <Button variant="ghost" size="icon" onClick={() => setOpen((value) => !value)} aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open}>
+          <Button variant="ghost" size="icon" className="min-h-11 min-w-11" onClick={() => setOpen((value) => !value)} aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open}>
             {open ? <X /> : <Menu />}
           </Button>
         </div>

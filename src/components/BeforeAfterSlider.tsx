@@ -39,6 +39,26 @@ const BeforeAfterSlider = ({
     dragging.current = false;
   }, []);
 
+  const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 10 : 5;
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+      e.preventDefault();
+      setPosition((value) => Math.max(0, value - step));
+    }
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+      e.preventDefault();
+      setPosition((value) => Math.min(100, value + step));
+    }
+    if (e.key === "Home") {
+      e.preventDefault();
+      setPosition(0);
+    }
+    if (e.key === "End") {
+      e.preventDefault();
+      setPosition(100);
+    }
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -48,6 +68,9 @@ const BeforeAfterSlider = ({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(position)}
+      aria-valuetext={`${Math.round(position)}% original photo visible`}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

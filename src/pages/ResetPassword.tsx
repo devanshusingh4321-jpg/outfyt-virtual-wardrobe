@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Lock, ArrowRight, Loader2, CheckCircle } from "lucide-react";
+import EditorialNav from "@/components/EditorialNav";
 
 const ResetPassword = () => {
   const { toast } = useToast();
@@ -57,30 +58,28 @@ const ResetPassword = () => {
 
   if (!isRecovery && !done) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <main className="editorial-page flex min-h-dvh items-center justify-center p-4">
         <div className="text-center">
           <p className="text-muted-foreground">Invalid or expired reset link.</p>
           <Button variant="link" onClick={() => navigate("/auth")} className="mt-4 text-primary">
             Back to login
           </Button>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] rounded-full bg-neon-blue/10 blur-[120px] pointer-events-none" />
-
-      <div className="w-full max-w-md relative z-10">
+    <main className="editorial-page min-h-dvh">
+      <EditorialNav backTo="/auth" />
+      <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-md items-center px-4 py-12 sm:px-8">
+        <div className="w-full">
         <div className="text-center mb-8">
-          <a href="/" className="font-display text-2xl font-bold text-gradient inline-block">
-            OUTFYT
-          </a>
+          <p className="wordmark inline-block">Outfyt</p>
           <p className="text-muted-foreground mt-2 text-sm">Set your new password</p>
         </div>
 
-        <div className="glass rounded-2xl p-8">
+        <div className="editorial-card rounded-lg p-8">
           {done ? (
             <div className="text-center space-y-4">
               <CheckCircle className="w-12 h-12 text-primary mx-auto" />
@@ -89,9 +88,10 @@ const ResetPassword = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="relative">
+                <label className="relative block">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                    aria-label="New password"
                   type="password"
                   placeholder="New password"
                   value={password}
@@ -100,10 +100,11 @@ const ResetPassword = () => {
                   minLength={6}
                   required
                 />
-              </div>
-              <div className="relative">
+                </label>
+              <label className="relative block">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                    aria-label="Confirm new password"
                   type="password"
                   placeholder="Confirm new password"
                   value={confirmPassword}
@@ -112,7 +113,7 @@ const ResetPassword = () => {
                   minLength={6}
                   required
                 />
-              </div>
+                </label>
               <Button
                 type="submit"
                 disabled={submitting}
@@ -129,8 +130,9 @@ const ResetPassword = () => {
             </form>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </main>
   );
 };
 

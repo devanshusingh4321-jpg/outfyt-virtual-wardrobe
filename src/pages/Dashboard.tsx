@@ -67,7 +67,7 @@ const Dashboard = () => {
     <div className="editorial-page">
       <EditorialNav authenticated onSignOut={signOut} />
 
-      <div className="container space-y-12 px-4 py-10 sm:px-8 sm:py-14">
+      <main className="container space-y-12 px-4 py-10 sm:px-8 sm:py-14">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <p className="eyebrow">Your studio</p>
@@ -162,7 +162,7 @@ const Dashboard = () => {
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };

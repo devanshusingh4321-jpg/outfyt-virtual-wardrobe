@@ -70,7 +70,7 @@ export default function OAuthConsent() {
   }
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-6">
+    <main className="editorial-page min-h-dvh flex items-center justify-center p-6">
       <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xl p-8 space-y-5">
         {error ? (
           <>

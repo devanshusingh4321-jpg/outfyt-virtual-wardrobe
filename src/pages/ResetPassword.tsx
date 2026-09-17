@@ -117,7 +117,7 @@ const ResetPassword = () => {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full h-11 glow-blue bg-primary hover:bg-primary/90 font-display gap-2"
+                className="w-full h-11 gap-2"
               >
                 {submitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

@@ -268,7 +268,7 @@ const OutfitBuilder = () => {
                 autoFocus
                 onKeyDown={(e) => e.key === "Enter" && setEditingName(false)}
               />
-              <Button size="icon" variant="ghost" onClick={() => setEditingName(false)}>
+              <Button size="icon" variant="ghost" className="min-h-11 min-w-11" onClick={() => setEditingName(false)} aria-label="Finish editing outfit name">
                 <Check className="w-4 h-4" />
               </Button>
             </div>

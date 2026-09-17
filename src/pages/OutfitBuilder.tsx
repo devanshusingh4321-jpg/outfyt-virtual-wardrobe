@@ -5,13 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import StyleSuggestions from "@/components/StyleSuggestions";
+import EditorialNav from "@/components/EditorialNav";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Plus, Trash2, Save, Shirt, Footprints,
-  Wind, Crown, Layers, GripVertical, ShoppingBag, Edit2, Check, X,
-  Download, Share2, Link2, Copy, ShoppingCart, ExternalLink
+  Plus, Save, Shirt, Footprints,
+  Wind, Crown, Layers, ShoppingBag, Edit2, Check, X,
+  Download, Link2, ShoppingCart
 } from "lucide-react";
 import { toPng } from "html-to-image";
 

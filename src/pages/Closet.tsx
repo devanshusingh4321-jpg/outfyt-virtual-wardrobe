@@ -158,6 +158,7 @@ const Closet = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
+              aria-label="Search closet"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search items..."
@@ -168,6 +169,8 @@ const Closet = () => {
             <Button
               variant={viewMode === "grid" ? "default" : "outline"}
               size="icon"
+              className="min-h-11 min-w-11"
+              aria-label="Show closet as grid"
               onClick={() => setViewMode("grid")}
             >
               <Grid3X3 className="w-4 h-4" />
@@ -175,6 +178,8 @@ const Closet = () => {
             <Button
               variant={viewMode === "list" ? "default" : "outline"}
               size="icon"
+              className="min-h-11 min-w-11"
+              aria-label="Show closet as list"
               onClick={() => setViewMode("list")}
             >
               <LayoutList className="w-4 h-4" />
@@ -184,22 +189,23 @@ const Closet = () => {
 
         {/* Category Filters */}
         <div className="flex flex-wrap gap-2">
-          <Badge
+          <Button
+            size="sm"
             variant={filter === "all" ? "default" : "outline"}
-            className="cursor-pointer"
             onClick={() => setFilter("all")}
           >
             All ({items.length})
-          </Badge>
+          </Button>
           {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
-            <Badge
+            <Button
               key={key}
+              size="sm"
               variant={filter === key ? "default" : "outline"}
-              className="cursor-pointer gap-1"
+              className="gap-1"
               onClick={() => setFilter(key as CategoryFilter)}
             >
               {config.icon} {config.label} ({categoryCounts[key] || 0})
-            </Badge>
+            </Button>
           ))}
         </div>
 
@@ -274,6 +280,7 @@ const Closet = () => {
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => setDeleteTarget(item)}
+                      aria-label={`Remove ${item.name} from closet`}
                       className="p-1.5 rounded-full bg-destructive/80 text-destructive-foreground hover:bg-destructive transition-colors"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -315,7 +322,7 @@ const Closet = () => {
                       </Button>
                     </a>
                   )}
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setDeleteTarget(item)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 min-h-11 min-w-11 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setDeleteTarget(item)} aria-label={`Remove ${item.name} from closet`}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -352,6 +359,7 @@ const Closet = () => {
                   </div>
                   <button
                     onClick={() => deleteTryonPhoto(tp.id)}
+                    aria-label={`Remove saved try-on ${tp.outfit_name || "photo"}`}
                     className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 className="w-3 h-3" />

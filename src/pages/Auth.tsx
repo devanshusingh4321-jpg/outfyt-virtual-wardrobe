@@ -57,7 +57,7 @@ const Auth = () => {
   const subtitle = forgotMode ? "We’ll send a secure reset link to your inbox." : isLogin ? "Return to your private fitting room." : "Save outfits, fit details, and private try-on results.";
 
   return (
-    <main className="editorial-page grid min-h-screen lg:grid-cols-2">
+    <main className="editorial-page grid min-h-dvh lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden lg:block">
         <img src={editorialHero.url} alt="Editorial Outfyt sample" className="absolute inset-0 h-full w-full object-cover" width={1440} height={1800} />
         <div className="absolute inset-0 bg-foreground/20" />

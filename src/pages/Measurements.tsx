@@ -108,14 +108,14 @@ const Measurements = () => {
         <form onSubmit={handleSave} className="editorial-card space-y-5 rounded-lg p-6 sm:p-8">
           {/* Country */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+            <label htmlFor="measurements-country" className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
               <Globe className="w-3 h-3" /> Country / Region
             </label>
             <Select
               value={form.country}
               onValueChange={(val) => setForm((f) => ({ ...f, country: val }))}
             >
-              <SelectTrigger className="bg-secondary/50 border-border/50 h-11">
+              <SelectTrigger id="measurements-country" className="bg-secondary/50 border-border/50 h-11">
                 <SelectValue placeholder="Select your country" />
               </SelectTrigger>
               <SelectContent>
@@ -137,8 +137,9 @@ const Measurements = () => {
               { key: "weight", label: "Weight (kg)", placeholder: "70" },
             ].map(({ key, label, placeholder }) => (
               <div key={key}>
-                <label className="text-xs text-muted-foreground mb-1.5 block">{label}</label>
+                <label htmlFor={`measurement-${key}`} className="text-xs text-muted-foreground mb-1.5 block">{label}</label>
                 <Input
+                  id={`measurement-${key}`}
                   type="number"
                   step="0.1"
                   placeholder={placeholder}
@@ -152,7 +153,7 @@ const Measurements = () => {
 
           {/* Fit Preference */}
           <div>
-            <label className="text-xs text-muted-foreground mb-2 block">Fit Preference</label>
+            <span className="text-xs text-muted-foreground mb-2 block">Fit Preference</span>
             <div className="grid grid-cols-3 gap-2">
               {["tight", "regular", "relaxed"].map((pref) => (
                 <Button

@@ -5,13 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import StyleSuggestions from "@/components/StyleSuggestions";
+import EditorialNav from "@/components/EditorialNav";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Plus, Trash2, Save, Shirt, Footprints,
-  Wind, Crown, Layers, GripVertical, ShoppingBag, Edit2, Check, X,
-  Download, Share2, Link2, Copy, ShoppingCart, ExternalLink
+  Plus, Save, Shirt, Footprints,
+  Wind, Crown, Layers, ShoppingBag, Edit2, Check, X,
+  Download, Link2, ShoppingCart
 } from "lucide-react";
 import { toPng } from "html-to-image";
 
@@ -182,8 +183,9 @@ const OutfitBuilder = () => {
       }
 
       // Insert outfit items with layer order
-      const inserts = outfitItems.map((item, idx) => ({
-        outfit_id: id!,
+       if (!id) throw new Error("Unable to create outfit");
+       const inserts = outfitItems.map((item, idx) => ({
+        outfit_id: id,
         clothing_item_id: item.id,
         layer_order: idx,
       }));
@@ -214,7 +216,7 @@ const OutfitBuilder = () => {
   const downloadOutfitImage = async () => {
     if (!outfitCardRef.current) return;
     try {
-      const dataUrl = await toPng(outfitCardRef.current, { backgroundColor: '#0E0E10', pixelRatio: 2 });
+      const dataUrl = await toPng(outfitCardRef.current, { backgroundColor: "hsl(var(--card))", pixelRatio: 2 });
       const link = document.createElement('a');
       link.download = `${outfitName.replace(/\s+/g, '-').toLowerCase()}-outfit.png`;
       link.href = dataUrl;
@@ -243,26 +245,18 @@ const OutfitBuilder = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="border-b border-border/50 glass sticky top-0 z-50">
-        <div className="container flex items-center justify-between h-16">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-1.5 text-muted-foreground">
-            <ArrowLeft className="w-4 h-4" /> Dashboard
+    <div className="editorial-page">
+      <EditorialNav
+        authenticated
+        backTo="/dashboard"
+        action={
+          <Button onClick={saveOutfit} disabled={saving || outfitItems.length === 0} size="sm" className="gap-1.5">
+            <Save className="w-4 h-4" /> {saving ? "Saving…" : "Save"}
           </Button>
-          <a href="/" className="font-display text-xl font-bold text-gradient">OUTFYT</a>
-          <Button
-            onClick={saveOutfit}
-            disabled={saving || outfitItems.length === 0}
-            className="glow-purple bg-primary hover:bg-primary/90 font-display gap-1.5"
-            size="sm"
-          >
-            <Save className="w-4 h-4" /> {saving ? "Saving..." : "Save"}
-          </Button>
-        </div>
-      </nav>
+        }
+      />
 
-      <div className="container py-8 space-y-8">
+      <main className="container space-y-8 px-4 py-10 sm:px-8 sm:py-14">
         {/* Outfit Name */}
         <div className="flex items-center gap-3">
           {editingName ? (
@@ -274,14 +268,16 @@ const OutfitBuilder = () => {
                 autoFocus
                 onKeyDown={(e) => e.key === "Enter" && setEditingName(false)}
               />
-              <Button size="icon" variant="ghost" onClick={() => setEditingName(false)}>
+              <Button size="icon" variant="ghost" className="min-h-11 min-w-11" onClick={() => setEditingName(false)} aria-label="Finish editing outfit name">
                 <Check className="w-4 h-4" />
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 cursor-pointer group" onClick={() => setEditingName(true)}>
-              <h1 className="font-display text-2xl font-bold">{outfitName}</h1>
-              <Edit2 className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-3xl font-normal">{outfitName}</h1>
+              <Button variant="ghost" size="icon" className="min-h-11 min-w-11" onClick={() => setEditingName(true)} aria-label="Edit outfit name">
+                <Edit2 className="w-4 h-4" />
+              </Button>
             </div>
           )}
         </div>
@@ -289,7 +285,7 @@ const OutfitBuilder = () => {
         {/* Body Zone Layers — wrapped for screenshot */}
         <div ref={outfitCardRef} className="space-y-4">
           {outfitItems.length === 0 ? (
-            <div className="glass rounded-2xl p-12 text-center">
+            <div className="editorial-card rounded-lg p-12 text-center">
               <ShoppingBag className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No items yet. Add pieces from your closet to build an outfit.</p>
             </div>
@@ -297,7 +293,7 @@ const OutfitBuilder = () => {
             sortedZones.map((zone) => {
               const config = ZONE_CONFIG[zone as BodyZone] || { label: zone, icon: <Layers className="w-4 h-4" />, order: 99 };
               return (
-                <div key={zone} className="glass rounded-2xl p-5">
+                <div key={zone} className="editorial-card rounded-lg p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-primary">{config.icon}</span>
                     <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -354,6 +350,7 @@ const OutfitBuilder = () => {
                           </div>
                           <button
                             onClick={() => removeItem(item.id)}
+                            aria-label={`Remove ${item.name} from outfit`}
                             className="absolute top-1.5 right-1.5 p-1 rounded-full bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <X className="w-3 h-3" />
@@ -386,32 +383,34 @@ const OutfitBuilder = () => {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="glass rounded-2xl p-6 space-y-4">
+               <div className="editorial-card rounded-lg p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-display font-semibold">Your Closet</h3>
-                  <Button variant="ghost" size="icon" onClick={() => setShowCloset(false)}>
+                  <Button variant="ghost" size="icon" className="min-h-11 min-w-11" onClick={() => setShowCloset(false)} aria-label="Close closet picker">
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
 
                 {/* Zone Filter */}
                 <div className="flex flex-wrap gap-2">
-                  <Badge
+                   <Button
+                     size="sm"
                     variant={filterZone === "all" ? "default" : "outline"}
-                    className="cursor-pointer"
+                     className="capitalize"
                     onClick={() => setFilterZone("all")}
                   >
                     All
-                  </Badge>
+                   </Button>
                   {(Object.keys(ZONE_CONFIG) as BodyZone[]).map((z) => (
-                    <Badge
+                     <Button
                       key={z}
+                       size="sm"
                       variant={filterZone === z ? "default" : "outline"}
-                      className="cursor-pointer capitalize"
+                       className="capitalize"
                       onClick={() => setFilterZone(z)}
                     >
                       {ZONE_CONFIG[z].label}
-                    </Badge>
+                     </Button>
                   ))}
                 </div>
 
@@ -478,7 +477,7 @@ const OutfitBuilder = () => {
 
         {/* Total Cost & Buy All */}
         {outfitItems.length > 0 && (
-          <div className="glass rounded-2xl p-5 space-y-4">
+           <div className="editorial-card rounded-lg p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Outfit Summary</p>
@@ -564,7 +563,7 @@ const OutfitBuilder = () => {
             </Button>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };

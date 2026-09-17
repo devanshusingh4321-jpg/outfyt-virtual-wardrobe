@@ -259,6 +259,7 @@ const TryOn = () => {
               <img src={photo} alt="Your photo" className="rounded-xl w-full aspect-[3/4] object-cover border border-border/50" />
               <button
                 onClick={() => { setPhoto(null); setShowOverlay(false); setCompositeUrl(null); }}
+                aria-label="Remove uploaded photo"
                 className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive/80 text-destructive-foreground"
               >
                 <X className="w-3.5 h-3.5" />
@@ -282,6 +283,7 @@ const TryOn = () => {
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            aria-label="Upload a try-on photo"
             className="hidden"
             onChange={handleFileUpload}
           />

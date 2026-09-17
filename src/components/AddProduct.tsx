@@ -106,6 +106,7 @@ const AddProduct = () => {
         </p>
         <form onSubmit={handleScrape} className="flex gap-3">
           <Input
+            aria-label="Product URL"
             type="url"
             placeholder="https://www.zara.com/product/..."
             value={url}

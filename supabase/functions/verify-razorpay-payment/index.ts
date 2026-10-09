@@ -18,17 +18,16 @@ Deno.serve(async (request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const publishableKey = Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY');
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
-    if (!supabaseUrl || !publishableKey || !razorpayKeySecret) {
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !publishableKey || !serviceRoleKey || !razorpayKeySecret) {
       return new Response(JSON.stringify({ error: 'Payment verification is not configured yet.' }), { status: 503, headers: jsonHeaders });
     }
 
     const authorization = request.headers.get('Authorization');
     if (!authorization) return new Response(JSON.stringify({ error: 'Please sign in to continue.' }), { status: 401, headers: jsonHeaders });
-    const supabase = createClient(supabaseUrl, publishableKey, {
-      global: { headers: { Authorization: authorization } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const token = authorization.replace(/^Bearer\s+/i, '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) return new Response(JSON.stringify({ error: 'Please sign in to continue.' }), { status: 401, headers: jsonHeaders });
 
     const payload: unknown = await request.json();

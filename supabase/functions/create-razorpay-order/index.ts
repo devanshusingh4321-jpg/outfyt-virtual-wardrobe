@@ -14,9 +14,10 @@ Deno.serve(async (request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const publishableKey = Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
-    if (!supabaseUrl || !publishableKey || !razorpayKeyId || !razorpayKeySecret) {
+    if (!supabaseUrl || !publishableKey || !serviceRoleKey || !razorpayKeyId || !razorpayKeySecret) {
       console.error('Razorpay order creation is missing server configuration');
       return respond({ error: 'Payments are not configured yet.' }, 503);
     }
@@ -24,11 +25,9 @@ Deno.serve(async (request) => {
     const authorization = request.headers.get('Authorization');
     if (!authorization) return respond({ error: 'Please sign in to continue.' }, 401);
 
-    const supabase = createClient(supabaseUrl, publishableKey, {
-      global: { headers: { Authorization: authorization } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const token = authorization.replace(/^Bearer\s+/i, '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) return respond({ error: 'Please sign in to continue.' }, 401);
 
     const body: unknown = await request.json();
@@ -44,6 +43,7 @@ Deno.serve(async (request) => {
       .maybeSingle();
     if (serviceError || !service) return respond({ error: 'This service is unavailable.' }, 404);
 
+    const paymentOrderId = crypto.randomUUID();
     const basicAuth = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
     const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
@@ -51,7 +51,7 @@ Deno.serve(async (request) => {
       body: JSON.stringify({
         amount: service.amount_paise,
         currency: service.currency,
-        receipt: crypto.randomUUID().replaceAll('-', '').slice(0, 40),
+        receipt: paymentOrderId.replaceAll('-', '').slice(0, 40),
         notes: { service_id: service.id, user_id: user.id },
       }),
     });
@@ -65,6 +65,7 @@ Deno.serve(async (request) => {
     const { data: order, error: insertError } = await supabase
       .from('payment_orders')
       .insert({
+        id: paymentOrderId,
         user_id: user.id,
         service_id: service.id,
         service_name: service.name,

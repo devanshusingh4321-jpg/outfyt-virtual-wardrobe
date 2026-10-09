@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, LogOut, Menu, Ruler, Shirt, X } from "lucide-react";
+import { CreditCard, Eye, LogOut, Menu, Ruler, Shirt, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -20,10 +20,12 @@ const EditorialNav = ({ authenticated = false, onSignOut, backTo, action }: Edit
         { label: "Try-on", to: "/try-on", icon: Eye },
         { label: "Closet", to: "/closet", icon: Shirt },
         { label: "Fit profile", to: "/measurements", icon: Ruler },
+        { label: "Services", to: "/services", icon: CreditCard },
       ]
     : [
         { label: "How it works", to: "/#how-it-works" },
         { label: "Sign in", to: "/auth" },
+        { label: "Services", to: "/services", icon: CreditCard },
       ];
 
   return (

@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import OAuthConsent from "./pages/OAuthConsent";
 import BrandNewDay from "./pages/BrandNewDay";
+import Services from "./pages/Services";
 
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/home" element={<Navigate to="/" replace />} />
 
             <Route path="/auth" element={<Auth />} />
+            <Route path="/services" element={<Services />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/measurements" element={<Measurements />} />
             <Route path="/outfit/new" element={<OutfitBuilder />} />

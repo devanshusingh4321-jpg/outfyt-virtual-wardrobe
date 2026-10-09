@@ -53,19 +53,7 @@ Deno.serve(async (request) => {
       return new Response(JSON.stringify({ error: 'Razorpay could not verify this payment.' }), { status: 400, headers: jsonHeaders });
     }
 
-    const { data: paidOrder, error: updateError } = await supabase
-      .from('payment_orders')
-      .update({ status: 'paid', razorpay_payment_id: payload.razorpayPaymentId })
-      .eq('id', order.id)
-      .eq('user_id', user.id)
-      .select('id,status')
-      .single();
-    if (updateError || !paidOrder) {
-      console.error('Could not mark verified Razorpay payment as paid:', updateError?.message ?? 'No order returned');
-      return new Response(JSON.stringify({ error: 'Payment was verified, but its status could not be saved. Please contact support.' }), { status: 500, headers: jsonHeaders });
-    }
-
-    return new Response(JSON.stringify({ success: true, status: paidOrder.status }), { headers: jsonHeaders });
+    return new Response(JSON.stringify({ success: true, status: 'pending_confirmation' }), { headers: jsonHeaders });
   } catch (error) {
     console.error('Razorpay verification failed:', error);
     return new Response(JSON.stringify({ error: 'Payment verification failed. Please contact support.' }), { status: 500, headers: jsonHeaders });

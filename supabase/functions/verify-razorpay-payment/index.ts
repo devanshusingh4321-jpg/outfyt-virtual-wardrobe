@@ -52,8 +52,42 @@ Deno.serve(async (request) => {
 
     if (order.status === 'paid') return new Response(JSON.stringify({ success: true, status: 'paid' }), { headers: jsonHeaders });
 
-    // The signed browser callback is only an acknowledgement; the verified order.paid webhook changes the stored status.
-    return new Response(JSON.stringify({ success: true, status: 'pending_confirmation' }), { headers: jsonHeaders });
+    const razorpayKeyId = Deno.env.get('RAZORPAY_KEY_ID');
+    if (!razorpayKeyId) return new Response(JSON.stringify({ error: 'Payment verification is not configured yet.' }), { status: 503, headers: jsonHeaders });
+    const paymentResponse = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(payload.razorpayPaymentId)}`, {
+      headers: { Authorization: `Basic ${btoa(`${razorpayKeyId}:${razorpayKeySecret}`)}` },
+    });
+    if (!paymentResponse.ok) {
+      const details = await paymentResponse.text();
+      console.error(`Razorpay payment lookup failed [${paymentResponse.status}]: ${details}`);
+      return new Response(JSON.stringify({ error: 'Razorpay could not confirm payment status yet. Please check again shortly.' }), { status: 502, headers: jsonHeaders });
+    }
+    const payment = await paymentResponse.json();
+    if (payment.id !== payload.razorpayPaymentId || payment.order_id !== order.razorpay_order_id || payment.amount !== (await supabase
+      .from('payment_orders')
+      .select('amount_paise')
+      .eq('id', order.id)
+      .eq('user_id', user.id)
+      .single()).data?.amount_paise || payment.currency !== 'INR') {
+      return new Response(JSON.stringify({ error: 'Payment details did not match the service order.' }), { status: 400, headers: jsonHeaders });
+    }
+    if (payment.status !== 'captured' || payment.captured !== true) {
+      return new Response(JSON.stringify({ success: true, status: 'pending_confirmation' }), { headers: jsonHeaders });
+    }
+
+    const { data: paidOrder, error: updateError } = await supabase.from('payment_orders')
+      .update({ status: 'paid', razorpay_payment_id: payload.razorpayPaymentId, updated_at: new Date().toISOString() })
+      .eq('id', order.id)
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .select('id,status')
+      .maybeSingle();
+    if (updateError) {
+      console.error('Could not save verified Razorpay payment:', updateError.message);
+      return new Response(JSON.stringify({ error: 'Payment is captured, but its status could not be saved. Please contact support.' }), { status: 500, headers: jsonHeaders });
+    }
+
+    return new Response(JSON.stringify({ success: true, status: paidOrder?.status ?? 'paid' }), { headers: jsonHeaders });
   } catch (error) {
     console.error('Razorpay verification failed:', error);
     return new Response(JSON.stringify({ error: 'Payment verification failed. Please contact support.' }), { status: 500, headers: jsonHeaders });

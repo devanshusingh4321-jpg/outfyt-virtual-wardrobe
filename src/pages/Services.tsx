@@ -174,7 +174,6 @@ const Services = () => {
           toast({ title: "Payment submitted", description: "Waiting for Razorpay to confirm your payment." });
         },
         modal: { ondismiss: () => setCheckoutId(null) },
-        theme: { color: "#272523" },
       });
       checkout.open();
     } catch (error) {

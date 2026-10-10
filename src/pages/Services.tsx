@@ -21,7 +21,7 @@ type RazorpayCheckoutOptions = {
   order_id: string;
   handler: (result: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => void;
   modal: { ondismiss: () => void };
-  theme: { color: string };
+  theme?: { color: string };
 };
 type RazorpayCheckout = { open: () => void };
 type RazorpayConstructor = new (options: RazorpayCheckoutOptions) => RazorpayCheckout;

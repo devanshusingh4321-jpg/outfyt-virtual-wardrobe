@@ -43,14 +43,14 @@ Deno.serve(async (request) => {
     if (orderError || !order || order.razorpay_order_id !== payload.razorpayOrderId) {
       return new Response(JSON.stringify({ error: 'The payment order could not be verified.' }), { status: 404, headers: jsonHeaders });
     }
-    if (order.status === 'paid') return new Response(JSON.stringify({ success: true, status: 'paid' }), { headers: jsonHeaders });
-
     const hmacKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(razorpayKeySecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     const signature = await crypto.subtle.sign('HMAC', hmacKey, new TextEncoder().encode(`${payload.razorpayOrderId}|${payload.razorpayPaymentId}`));
     const expectedSignature = [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
     if (!verifyHex(expectedSignature, payload.razorpaySignature)) {
       return new Response(JSON.stringify({ error: 'Razorpay could not verify this payment.' }), { status: 400, headers: jsonHeaders });
     }
+
+    if (order.status === 'paid') return new Response(JSON.stringify({ success: true, status: 'paid' }), { headers: jsonHeaders });
 
     return new Response(JSON.stringify({ success: true, status: 'pending_confirmation' }), { headers: jsonHeaders });
   } catch (error) {

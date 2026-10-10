@@ -1,9 +1,7 @@
-# Redesign roadmap
+# Current roadmap
 
-- [ ] Replace the shared visual system, typography, controls, navigation, and branded copy.
-- [ ] Build the editorial landing page with a labeled sample preview and accurate workflow.
-- [ ] Redesign authentication and supporting account states.
-- [ ] Redesign dashboard, product extraction, closet, measurements, outfit builder, and try-on workspace.
-- [ ] Verify checks, core browser flows, mobile layout, focus, reduced motion, and overflow.
-
-- [ ] Resume the approved redesign from the current implementation state.
+- [x] Add Razorpay-backed service checkout with INR amounts, per-customer payment history, and server-side verification.
+- [x] Add the `order.paid` webhook callback endpoint; configure the callback with Razorpay after keys are added.
+- [ ] Add Razorpay test API keys and webhook secret after the user submits them securely.
+- [ ] Add the actual service names, descriptions, and INR prices once provided.
+- [ ] Verify end-to-end test checkout after credentials and service listings are configured.

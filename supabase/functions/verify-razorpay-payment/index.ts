@@ -16,10 +16,9 @@ Deno.serve(async (request) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const publishableKey = Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY');
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !publishableKey || !serviceRoleKey || !razorpayKeySecret) {
+    if (!supabaseUrl || !serviceRoleKey || !razorpayKeySecret) {
       return new Response(JSON.stringify({ error: 'Payment verification is not configured yet.' }), { status: 503, headers: jsonHeaders });
     }
 

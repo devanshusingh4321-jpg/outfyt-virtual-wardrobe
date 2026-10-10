@@ -16,10 +16,9 @@ Deno.serve(async (request) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const publishableKey = Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY');
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !publishableKey || !serviceRoleKey || !razorpayKeySecret) {
+    if (!supabaseUrl || !serviceRoleKey || !razorpayKeySecret) {
       return new Response(JSON.stringify({ error: 'Payment verification is not configured yet.' }), { status: 503, headers: jsonHeaders });
     }
 
@@ -44,8 +43,6 @@ Deno.serve(async (request) => {
     if (orderError || !order || order.razorpay_order_id !== payload.razorpayOrderId) {
       return new Response(JSON.stringify({ error: 'The payment order could not be verified.' }), { status: 404, headers: jsonHeaders });
     }
-    if (order.status === 'paid') return new Response(JSON.stringify({ success: true, status: 'paid' }), { headers: jsonHeaders });
-
     const hmacKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(razorpayKeySecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     const signature = await crypto.subtle.sign('HMAC', hmacKey, new TextEncoder().encode(`${payload.razorpayOrderId}|${payload.razorpayPaymentId}`));
     const expectedSignature = [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -53,6 +50,9 @@ Deno.serve(async (request) => {
       return new Response(JSON.stringify({ error: 'Razorpay could not verify this payment.' }), { status: 400, headers: jsonHeaders });
     }
 
+    if (order.status === 'paid') return new Response(JSON.stringify({ success: true, status: 'paid' }), { headers: jsonHeaders });
+
+    // The signed browser callback is only an acknowledgement; the verified order.paid webhook changes the stored status.
     return new Response(JSON.stringify({ success: true, status: 'pending_confirmation' }), { headers: jsonHeaders });
   } catch (error) {
     console.error('Razorpay verification failed:', error);

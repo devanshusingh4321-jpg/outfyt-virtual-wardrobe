@@ -52,6 +52,7 @@ Deno.serve(async (request) => {
 
     if (order.status === 'paid') return new Response(JSON.stringify({ success: true, status: 'paid' }), { headers: jsonHeaders });
 
+    // The signed browser callback is only an acknowledgement; the verified order.paid webhook changes the stored status.
     return new Response(JSON.stringify({ success: true, status: 'pending_confirmation' }), { headers: jsonHeaders });
   } catch (error) {
     console.error('Razorpay verification failed:', error);

@@ -67,13 +67,13 @@ Deno.serve(async (request) => {
       return new Response(JSON.stringify({ received: true }), { headers });
     }
     const { data: updatedOrder, error } = await supabase.from('payment_orders')
-      .update({ status: 'paid', razorpay_payment_id: razorpayPaymentId })
+      .update({ status: 'paid', razorpay_payment_id: razorpayPaymentId, updated_at: new Date().toISOString() })
       .eq('id', order.id)
       .eq('status', 'pending')
       .select('id')
       .maybeSingle();
     if (error || !updatedOrder) {
-      console.error('Could not update payment order from webhook:', error.message);
+      console.error('Could not update payment order from webhook:', error?.message ?? 'No pending order was updated');
       return new Response(JSON.stringify({ error: 'Could not record the paid order.' }), { status: 500, headers });
     }
 

@@ -36,7 +36,7 @@ Deno.serve(async (request) => {
 
     const { data: order, error: orderError } = await supabase
       .from('payment_orders')
-      .select('id,razorpay_order_id,status')
+      .select('id,razorpay_order_id,status,amount_paise')
       .eq('id', payload.paymentOrderId)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -63,12 +63,7 @@ Deno.serve(async (request) => {
       return new Response(JSON.stringify({ error: 'Razorpay could not confirm payment status yet. Please check again shortly.' }), { status: 502, headers: jsonHeaders });
     }
     const payment = await paymentResponse.json();
-    if (payment.id !== payload.razorpayPaymentId || payment.order_id !== order.razorpay_order_id || payment.amount !== (await supabase
-      .from('payment_orders')
-      .select('amount_paise')
-      .eq('id', order.id)
-      .eq('user_id', user.id)
-      .single()).data?.amount_paise || payment.currency !== 'INR') {
+    if (payment.id !== payload.razorpayPaymentId || payment.order_id !== order.razorpay_order_id || payment.amount !== order.amount_paise || payment.currency !== 'INR') {
       return new Response(JSON.stringify({ error: 'Payment details did not match the service order.' }), { status: 400, headers: jsonHeaders });
     }
     if (payment.status !== 'captured' || payment.captured !== true) {

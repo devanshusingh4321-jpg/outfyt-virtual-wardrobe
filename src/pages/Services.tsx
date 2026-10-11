@@ -170,6 +170,12 @@ const Services = () => {
             setPageError(verification?.error ?? "Payment was submitted but could not be verified yet. Please check your payment history.");
             return;
           }
+          if (verification.status === "paid") {
+            setSearchParams({}, { replace: true });
+            toast({ title: "Payment confirmed", description: "Your payment is complete." });
+            await loadCustomerData();
+            return;
+          }
           setSearchParams({ order: data.paymentOrder.id });
           toast({ title: "Payment submitted", description: "Waiting for Razorpay to confirm your payment." });
         },

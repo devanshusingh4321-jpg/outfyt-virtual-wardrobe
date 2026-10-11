@@ -4,10 +4,12 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const verifyHex = (input: string, expectedHex: string) => {
   if (!/^[0-9a-f]{64}$/i.test(expectedHex)) return false;
-  const expected = Uint8Array.from(expectedHex.match(/.{2}/g) ?? [], (byte) => Number.parseInt(byte, 16));
-  const supplied = new TextEncoder().encode(input);
-  if (expected.length !== supplied.length) return false;
-  return expected.every((value, index) => value === supplied[index]);
+  const suppliedHex = [...new TextEncoder().encode(input)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  const expected = new TextEncoder().encode(expectedHex.toLowerCase());
+  const supplied = new TextEncoder().encode(suppliedHex);
+  let difference = expected.length ^ supplied.length;
+  for (let index = 0; index < expected.length; index += 1) difference |= expected[index] ^ (supplied[index] ?? 0);
+  return difference === 0;
 };
 
 Deno.serve(async (request) => {

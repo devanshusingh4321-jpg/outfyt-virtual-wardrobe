@@ -1,5 +1,6 @@
 # Current roadmap
 
+- [ ] Improve virtual try-on identity preservation using a high-quality image-edit flow; retain a photo-first composition, garment references, and current private save flow.
 - [x] Add Razorpay-backed service checkout with INR amounts, per-customer payment history, and server-side verification.
 - [x] Add and deploy the `order.paid` webhook callback endpoint.
 - [x] Add Razorpay test API keys through the secure secret form.

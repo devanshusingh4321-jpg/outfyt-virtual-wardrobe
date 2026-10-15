@@ -31,7 +31,7 @@ export async function generateTryOnStream(
     throw new Error(failure?.error || "The try-on could not be generated. Please try again.");
   }
 
-  let result: TryOnResult | null = null;
+  const state: { result?: TryOnResult } = {};
   let streamError: string | null = null;
   const parser = createParser({
     onEvent(event) {
@@ -59,7 +59,7 @@ export async function generateTryOnStream(
       }
 
       if (event.event === "tryon.completed" && payload.success === true && payload.imageUrl && payload.imagePath) {
-        result = { success: true, imageUrl: payload.imageUrl, imagePath: payload.imagePath };
+        state.result = { success: true, imageUrl: payload.imageUrl, imagePath: payload.imagePath };
       }
     },
   });
@@ -76,6 +76,6 @@ export async function generateTryOnStream(
   }
 
   if (streamError) throw new Error(streamError);
-  if (!result) throw new Error("The try-on ended before the finished preview was ready. Please try again.");
-  return result;
+  if (!state.result) throw new Error("The try-on ended before the finished preview was ready. Please try again.");
+  return state.result;
 }

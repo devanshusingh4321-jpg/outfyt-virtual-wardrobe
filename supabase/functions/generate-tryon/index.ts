@@ -208,10 +208,9 @@ Deno.serve(async (request) => {
     const encoder = new TextEncoder();
     const upstreamReader = upstream.body.getReader();
     let eventBuffer = '';
-    let imageBytes: Uint8Array | null = null;
     let terminalError: string | null = null;
     let gotCompletedEvent = false;
-    let totalImageBytes = 0;
+    let errorEventSent = false;
 
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -249,14 +248,12 @@ Deno.serve(async (request) => {
           }
           const binary = atob(eventData.b64_json);
           const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-          totalImageBytes += bytes.byteLength;
-          if (totalImageBytes > 24 * 1024 * 1024) {
+          if (bytes.byteLength > 24 * 1024 * 1024) {
             terminalError = 'The generated try-on is too large to save. Please try again.';
             return;
           }
 
           if (eventType === 'image_edit.completed') {
-            imageBytes = bytes;
             gotCompletedEvent = true;
             sendEvent('tryon.status', { phase: 'saving' });
             try {
@@ -264,7 +261,6 @@ Deno.serve(async (request) => {
               sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
             } catch (error) {
               terminalError = error instanceof Error ? error.message : 'The preview could not be saved securely.';
-              sendEvent('error', { error: { message: terminalError } });
             }
             return;
           }
@@ -283,13 +279,17 @@ Deno.serve(async (request) => {
           }
           eventBuffer += decoder.decode();
           if (eventBuffer.trim()) await processEvent(eventBuffer);
-          if (!terminalError && !gotCompletedEvent) {
+          if (terminalError) {
+            sendEvent('error', { error: { message: terminalError } });
+            errorEventSent = true;
+          } else if (!gotCompletedEvent) {
             terminalError = 'The image editor ended before the try-on was complete. Please try again.';
             sendEvent('error', { error: { message: terminalError } });
+            errorEventSent = true;
           }
         } catch (error) {
           console.error('Try-on image stream failed:', error instanceof Error ? error.message : 'Unknown streaming error');
-          sendEvent('error', { error: { message: 'The try-on was interrupted before it finished. Please try again.' } });
+          if (!errorEventSent) sendEvent('error', { error: { message: 'The try-on was interrupted before it finished. Please try again.' } });
         } finally {
           upstreamReader.releaseLock();
           controller.close();
@@ -300,8 +300,6 @@ Deno.serve(async (request) => {
       },
     });
 
-    void imageBytes;
-    void terminalError;
     return new Response(stream, {
       headers: { ...corsHeaders, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive' },
     });

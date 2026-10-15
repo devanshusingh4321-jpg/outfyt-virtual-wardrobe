@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import EditorialNav from "@/components/EditorialNav";
+import { generateTryOnStream } from "@/lib/tryon-stream";
 
 type ClothingItem = {
   id: string;
@@ -63,6 +64,8 @@ const TryOn = () => {
   const [compositePath, setCompositePath] = useState<string | null>(null);
   
   const [generating, setGenerating] = useState(false);
+  const [generationPreview, setGenerationPreview] = useState<string | null>(null);
+  const [generationPhase, setGenerationPhase] = useState<"rendering" | "saving">("rendering");
   const [colorOverrides, setColorOverrides] = useState<ColorOverrides>({});
   const [stylingOptions, setStylingOptions] = useState<StylingOptions>({});
   const [savingTryon, setSavingTryon] = useState(false);
@@ -165,43 +168,38 @@ const TryOn = () => {
     setShowOverlay(false);
     setCompositeUrl(null);
     setCompositePath(null);
+    setGenerationPreview(null);
+    setGenerationPhase("rendering");
     
     setTryonSaved(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-tryon', {
-        body: {
-          photoUrl: photo,
-          outfitItems: selectedOutfit.items.map(i => ({
-            name: i.name,
-            brand: i.brand,
-            image_url: i.image_url,
-            category: i.category,
-            color: colorOverrides[i.id] || (i.colors && i.colors.length > 0 ? i.colors[0] : null),
-            buttoned: stylingOptions[i.id]?.buttoned,
-            tucked: stylingOptions[i.id]?.tucked,
-          })),
-          size: sizeSimulation,
-        },
+      const result = await generateTryOnStream({
+        photoUrl: photo,
+        outfitItems: selectedOutfit.items.map(i => ({
+          name: i.name,
+          brand: i.brand,
+          image_url: i.image_url,
+          category: i.category,
+          color: colorOverrides[i.id] || (i.colors && i.colors.length > 0 ? i.colors[0] : null),
+          buttoned: stylingOptions[i.id]?.buttoned,
+          tucked: stylingOptions[i.id]?.tucked,
+        })),
+        size: sizeSimulation,
+      }, setGenerationPreview, (phase) => {
+        if (phase === "saving") setGenerationPhase("saving");
       });
-
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || 'Generation failed');
-
-      const resultUrl = data.imageUrl || data.imageBase64;
-      if (resultUrl) {
-        setCompositeUrl(resultUrl);
-        setCompositePath(data.imagePath || null);
-        
-        setShowOverlay(true);
-        toast({ title: "Try-on generated" });
-      } else {
-        throw new Error('No image returned');
-      }
+      setCompositeUrl(result.imageUrl);
+      setCompositePath(result.imagePath);
+      setGenerationPreview(null);
+      setShowOverlay(true);
+      toast({ title: "Try-on generated" });
     } catch (err: any) {
+      setGenerationPreview(null);
       toast({ title: "Generation failed", description: err.message, variant: "destructive" });
     } finally {
       setGenerating(false);
+      setGenerationPreview(null);
     }
   };
   const saveTryonPhoto = async () => {
@@ -487,6 +485,36 @@ const TryOn = () => {
             <><Eye className="w-5 h-5" /> Generate Try-On Preview</>
           )}
         </Button>
+
+        <AnimatePresence>
+          {generating && (
+            <motion.section
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              aria-live="polite"
+              aria-busy="true"
+              className="editorial-card mx-auto w-full max-w-xl space-y-4 rounded-lg p-5"
+            >
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
+                <div>
+                  <h2 className="font-display text-base">{generationPhase === "saving" ? "Saving your private preview" : "Editing the outfit"}</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {generationPhase === "saving" ? "The finished image is being saved securely." : "Keeping your photo intact while the clothing is changed."}
+                  </p>
+                </div>
+              </div>
+              {generationPreview && (
+                <img
+                  src={generationPreview}
+                  alt="An unfinished preview of the clothing edit"
+                  className="mx-auto max-h-[28rem] w-auto max-w-full rounded-md object-contain blur-sm"
+                />
+              )}
+            </motion.section>
+          )}
+        </AnimatePresence>
 
         {/* Result: Overlay + Slider */}
         <AnimatePresence>

@@ -2,9 +2,13 @@ import { createParser } from "eventsource-parser";
 import { supabase } from "@/integrations/supabase/client";
 
 type TryOnResult = { success: true; imageUrl: string; imagePath: string };
-type TryOnEvent = { type?: string; error?: { message?: string }; success?: boolean; imageUrl?: string; imagePath?: string };
+type TryOnEvent = { type?: string; error?: { message?: string }; success?: boolean; imageUrl?: string; imagePath?: string; phase?: string };
 
-export async function generateTryOnStream(body: Record<string, unknown>): Promise<TryOnResult> {
+export async function generateTryOnStream(
+  body: Record<string, unknown>,
+  onPreview: (imageUrl: string) => void,
+  onPhase: (phase: string) => void,
+): Promise<TryOnResult> {
   const baseUrl = import.meta.env.VITE_SUPABASE_URL;
   const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -41,6 +45,16 @@ export async function generateTryOnStream(body: Record<string, unknown>): Promis
 
       if (event.event === "error" || payload.type === "error") {
         streamError = payload.error?.message || "The try-on could not be completed. Please try again.";
+        return;
+      }
+
+      if (event.event === "tryon.preview" && typeof payload.imageUrl === "string") {
+        onPreview(payload.imageUrl);
+        return;
+      }
+
+      if (event.event === "tryon.status" && typeof payload.phase === "string") {
+        onPhase(payload.phase);
         return;
       }
 

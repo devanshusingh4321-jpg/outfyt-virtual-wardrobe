@@ -1,194 +1,312 @@
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { corsHeaders as supabaseCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+
 const corsHeaders = {
+  ...supabaseCorsHeaders,
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+const gatewayUrl = 'https://ai.gateway.lovable.dev/v1';
+const imageModel = 'openai/gpt-image-2.5-sunburst';
+const allowedSizes = new Set(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
+const allowedCategories = new Set(['topwear', 'bottomwear', 'outerwear', 'footwear', 'accessory']);
+const maxInputBytes = 12 * 1024 * 1024;
+
+type OutfitItem = {
+  name: string;
+  brand?: string | null;
+  image_url?: string | null;
+  category?: string | null;
+  color?: string | null;
+  buttoned?: boolean;
+  tucked?: boolean;
 };
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 8192;
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-    for (let j = 0; j < chunk.length; j++) {
-      binary += String.fromCharCode(chunk[j]);
-    }
+type PhotoAsset = { bytes: Uint8Array; mimeType: string };
+
+function jsonError(message: string, status: number) {
+  return new Response(JSON.stringify({ success: false, error: message }), { status, headers: jsonHeaders });
+}
+
+function safeText(value: unknown, maxLength = 160): string | null {
+  if (typeof value !== 'string') return null;
+  const result = value.trim().replace(/[\u0000-\u001f\u007f]/g, '').slice(0, maxLength);
+  return result || null;
+}
+
+function isAllowedImageUrl(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length > 4096) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.username === '' && url.password === '';
+  } catch {
+    return false;
   }
-  return btoa(binary);
 }
 
-async function fetchImageAsBase64(url: string): Promise<{ base64: string; mime: string }> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch image');
-  const buf = await res.arrayBuffer();
-  return { base64: arrayBufferToBase64(buf), mime: res.headers.get('content-type') || 'image/jpeg' };
+async function fetchImage(url: string, maxBytes = 8 * 1024 * 1024): Promise<PhotoAsset> {
+  const response = await fetch(url, { redirect: 'error' });
+  if (!response.ok) throw new Error('An outfit or photo image could not be loaded. Please retry the upload.');
+  const mimeType = (response.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
+    throw new Error('Try-on photos and clothing images must be JPEG, PNG, or WebP.');
+  }
+  const declaredSize = Number(response.headers.get('content-length') || 0);
+  if (declaredSize > maxBytes) throw new Error('An image is too large to use for this try-on.');
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength === 0 || bytes.byteLength > maxBytes) throw new Error('An image is empty or too large to use for this try-on.');
+  return { bytes, mimeType };
 }
 
-function base64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
+function makeImageFile(asset: PhotoAsset, filename: string): File {
+  return new File([asset.bytes], filename, { type: asset.mimeType });
 }
 
-async function callAI(apiKey: string, content: any[]): Promise<string | null> {
-  const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'google/gemini-3-pro-image-preview',
-      messages: [{ role: 'user', content }],
-      modalities: ['image', 'text'],
-    }),
+async function createPrivateResult(supabase: ReturnType<typeof createClient>, userId: string, bytes: Uint8Array) {
+  const path = `${userId}/tryon-result-${crypto.randomUUID()}.png`;
+  const { error: uploadError } = await supabase.storage.from('tryon-photos').upload(path, bytes, {
+    contentType: 'image/png',
+    upsert: false,
   });
-  if (!resp.ok) {
-    const errText = await resp.text();
-    console.error('AI error:', resp.status, errText);
-    if (resp.status === 429 || resp.status === 402) throw new Error(`AI_${resp.status}`);
-    throw new Error(`AI generation failed: ${resp.status}`);
-  }
-  const data = await resp.json();
-  const images = data.choices?.[0]?.message?.images;
-  if (images && images.length > 0) {
-    const url = images[0]?.image_url?.url;
-    if (url && url.startsWith('data:')) return url.split(',')[1] || null;
-  }
-  return null;
-}
+  if (uploadError) throw new Error('The try-on was generated, but it could not be saved securely. Please retry.');
 
-async function uploadImage(supabase: any, userId: string, b64: string, suffix: string): Promise<{ path: string; signedUrl: string } | null> {
-  const bytes = base64ToBytes(b64);
-  const path = `${userId}/tryon-${suffix}-${Date.now()}.jpg`;
-  const { error } = await supabase.storage.from('tryon-photos').upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
-  if (error) { console.error('Upload error:', error); return null; }
-  const { data, error: signedUrlError } = await supabase.storage
-    .from('tryon-photos')
-    .createSignedUrl(path, 3600);
-  if (signedUrlError || !data?.signedUrl) {
-    console.error('Signed URL error:', signedUrlError);
-    return null;
+  const { data, error } = await supabase.storage.from('tryon-photos').createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) {
+    await supabase.storage.from('tryon-photos').remove([path]);
+    throw new Error('The try-on was generated, but its private preview could not be opened. Please retry.');
   }
   return { path, signedUrl: data.signedUrl };
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+function tryonPrompt(items: OutfitItem[], size: string) {
+  const fit = size === 'XS' || size === 'S' ? 'close-fitting, but anatomically natural' : size === 'L' || size === 'XL' || size === 'XXL' ? 'relaxed with natural ease' : 'regular true-to-size';
+  const descriptions = items.map((item, index) => {
+    const details = [item.brand, item.name, item.category ? `category: ${item.category}` : null, item.color ? `requested color: ${item.color}` : null]
+      .filter((part): part is string => Boolean(part));
+    const styling = [item.buttoned === true ? 'buttoned up' : item.buttoned === false ? 'worn open' : null, item.tucked === true ? 'tucked in' : item.tucked === false ? 'untucked' : null]
+      .filter((part): part is string => Boolean(part));
+    return `${index + 1}. ${details.join(', ')}${styling.length ? `; styling: ${styling.join(', ')}` : ''}`;
+  }).join('\n');
+
+  return `Make a photorealistic virtual clothing try-on by EDITING the first input photograph, not by creating a new photograph.
+
+IMAGE ROLES AND ORDER
+- Image 1 is the source photograph of the person. It is the immutable base image and must remain the same person in the same photograph.
+- Each following image, in order, is a garment reference for its correspondingly numbered outfit item below. Reference photos show clothing only; do not copy their model, face, body, pose, lighting, crop, or background.
+
+ONLY PERMITTED CHANGE
+Replace only the visible clothing worn by the person with these requested items. Use the garment references to faithfully match each item's design, color, pattern, material, collar, sleeves, length, and visible construction. Apply natural fabric folds, occlusion, and lighting consistent with the original source. Target fit: ${fit} (${size}). Respect only the listed styling settings.
+
+LOCK THE SOURCE PHOTOGRAPH
+Preserve every pixel outside the clothing edit as closely as possible. Do not retouch, regenerate, beautify, reinterpret, or restyle the person. Keep the exact face and identity: facial geometry, eyes, eyebrows, nose, lips, teeth, ears, skin texture, expression, makeup, and age. Keep hair and hairline, skin tone, body shape and proportions, hands and fingers, pose, gaze, accessories not covered by the new clothes, and all visible anatomy unchanged. Keep the original camera angle, framing, crop, perspective, focus, lighting, color grade, and every background object exactly as they are.
+
+Do not change facial features or any non-clothing element. Do not add objects, people, jewelry, text, logos, or new accessories. Do not crop, expand, mirror, or change the aspect ratio. If a garment is difficult to render, keep the source photograph unchanged in that region rather than modifying the face, body, or background.
+
+OUTFIT TO APPLY
+${descriptions}
+
+Return one high-quality photorealistic edit of the original source photo. The result should be indistinguishable from the input outside the garment areas.`;
+}
+
+Deno.serve(async (request) => {
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (request.method !== 'POST') return jsonError('Method not allowed.', 405);
+  if (Number(request.headers.get('content-length') || 0) > 24 * 1024 * 1024) return jsonError('The try-on request is too large.', 413);
 
   try {
-    const { photoUrl, outfitItems, size } = await req.json();
-    if (!photoUrl || !outfitItems || outfitItems.length === 0) {
-      return new Response(JSON.stringify({ success: false, error: 'Photo URL and outfit items are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!apiKey) {
-      return new Response(JSON.stringify({ success: false, error: 'AI not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!supabaseUrl || !serviceRoleKey || !apiKey) {
+      console.error('Try-on generation is missing required server configuration.');
+      return jsonError('Try-on generation is not configured yet.', 503);
     }
 
-    // Auth
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const token = (req.headers.get('Authorization') || '').replace('Bearer ', '');
-    const { data: { user } } = await supabase.auth.getUser(token);
-    if (!user) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
+    const authorization = request.headers.get('Authorization');
+    if (!authorization || !/^Bearer\s+\S+$/i.test(authorization)) return jsonError('Please sign in to continue.', 401);
+    const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authorization.replace(/^Bearer\s+/i, ''));
+    if (authError || !user) return jsonError('Please sign in to continue.', 401);
 
-    // Fetch user photo
-    const photo = await fetchImageAsBase64(photoUrl);
-
-    // Build outfit description & fetch item images
-    const itemDescriptions: string[] = [];
-    const fetchPromises: Promise<{ base64: string; mime: string; name: string } | null>[] = [];
-
-    for (const item of outfitItems) {
-      const notes: string[] = [];
-      if (item.buttoned === true) notes.push('buttoned up');
-      if (item.buttoned === false) notes.push('unbuttoned/open');
-      if (item.tucked === true) notes.push('tucked in');
-      if (item.tucked === false) notes.push('untucked');
-
-      const desc = [item.brand, item.name, item.category ? `(${item.category})` : '', item.color ? `in ${item.color}` : '', notes.length ? `— ${notes.join(', ')}` : ''].filter(Boolean).join(' ');
-      itemDescriptions.push(desc);
-
-      if (item.image_url) {
-        fetchPromises.push(
-          fetch(item.image_url).then(async r => r.ok ? { base64: arrayBufferToBase64(await r.arrayBuffer()), mime: r.headers.get('content-type') || 'image/jpeg', name: desc } : null).catch(() => null)
-        );
-      }
-    }
-
-    const itemImages = (await Promise.all(fetchPromises)).filter(Boolean) as { base64: string; mime: string; name: string }[];
-    const fitStyle = size === 'XS' || size === 'S' ? 'tight/fitted' : size === 'L' || size === 'XL' || size === 'XXL' ? 'loose/relaxed' : 'regular true-to-size';
-
-    console.log('Generating try-on, items:', itemImages.length, 'size:', size);
-
-    // Build image content (person photo + item refs)
-    const imageContent: any[] = [
-      { type: 'image_url', image_url: { url: `data:${photo.mime};base64,${photo.base64}` } },
-    ];
-    for (let i = 0; i < itemImages.length; i++) {
-      imageContent.push({ type: 'text', text: `Reference for item ${i + 1}: ${itemImages[i].name}` });
-      imageContent.push({ type: 'image_url', image_url: { url: `data:${itemImages[i].mime};base64,${itemImages[i].base64}` } });
-    }
-
-    const outfitList = itemDescriptions.map((d, i) => `• Item ${i + 1}: ${d}`).join('\n');
-
-    const prompt = `You are a hyper-realistic virtual try-on AI performing surgical clothing replacement.
-
-ABSOLUTE RULES:
-1. Preserve the person's identity exactly: face, skin tone, hair, body shape, pose, expression.
-2. Background stays completely unchanged.
-3. ONLY replace clothing. Do not alter skin, hair, face, hands, or background.
-4. Natural draping, realistic fabric physics, consistent lighting.
-5. Fit: ${fitStyle} (size ${size}).
-6. Output must look like a real, unedited photograph.
-
-TASK: Replace the person's current clothing with:
-${outfitList}
-
-Keep everything except clothing identical.`;
-
-    const content: any[] = [{ type: 'text', text: prompt }, ...imageContent];
-
-    let resultB64: string | null = null;
-
+    let payload: unknown;
     try {
-      resultB64 = await callAI(apiKey, content);
-    } catch (e: any) {
-      if (e.message === 'AI_429') {
-        return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded, please try again later.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      payload = await request.json();
+    } catch {
+      return jsonError('The try-on request is not valid.', 400);
+    }
+    if (!payload || typeof payload !== 'object' || !('photoUrl' in payload) || !('outfitItems' in payload) || !('size' in payload)) {
+      return jsonError('A photo, outfit, and size are required.', 400);
+    }
+    const body = payload as { photoUrl: unknown; outfitItems: unknown; size: unknown };
+    if (!isAllowedImageUrl(body.photoUrl)) return jsonError('Please upload a valid try-on photo.', 400);
+    if (!Array.isArray(body.outfitItems) || body.outfitItems.length < 1 || body.outfitItems.length > 8) {
+      return jsonError('Choose an outfit with between one and eight items.', 400);
+    }
+    if (typeof body.size !== 'string' || !allowedSizes.has(body.size)) return jsonError('Choose a valid size before generating your try-on.', 400);
+
+    const items: OutfitItem[] = [];
+    for (const value of body.outfitItems) {
+      if (!value || typeof value !== 'object' || !('name' in value)) return jsonError('One of the outfit items is not valid.', 400);
+      const item = value as Record<string, unknown>;
+      const name = safeText(item.name, 120);
+      if (!name) return jsonError('Each outfit item needs a name.', 400);
+      const category = safeText(item.category, 40);
+      if (category && !allowedCategories.has(category.toLowerCase())) return jsonError('One of the outfit categories is not supported.', 400);
+      if (item.image_url !== null && item.image_url !== undefined && !isAllowedImageUrl(item.image_url)) {
+        return jsonError('One of the outfit images is not a valid secure image link.', 400);
       }
-      if (e.message === 'AI_402') {
-        return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted. Please add funds.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-      throw e;
+      items.push({
+        name,
+        brand: safeText(item.brand, 80),
+        category: category?.toLowerCase() ?? null,
+        color: safeText(item.color, 60),
+        image_url: typeof item.image_url === 'string' ? item.image_url : null,
+        ...(typeof item.buttoned === 'boolean' ? { buttoned: item.buttoned } : {}),
+        ...(typeof item.tucked === 'boolean' ? { tucked: item.tucked } : {}),
+      });
     }
 
-    if (!resultB64) {
-      return new Response(JSON.stringify({ success: false, error: 'AI did not generate the image. Try with a clearer full-body photo.' }),
-        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const [sourcePhoto, garmentImages] = await Promise.all([
+      fetchImage(body.photoUrl),
+      Promise.all(items.map((item) => item.image_url ? fetchImage(item.image_url, 4 * 1024 * 1024) : Promise.resolve(null))),
+    ]);
+    const inputSize = sourcePhoto.bytes.byteLength + garmentImages.reduce((sum, image) => sum + (image?.bytes.byteLength ?? 0), 0);
+    if (inputSize > maxInputBytes) return jsonError('The selected photos are too large. Choose smaller images and try again.', 413);
+
+    const form = new FormData();
+    form.set('model', imageModel);
+    form.set('prompt', tryonPrompt(items, body.size));
+    form.set('quality', 'max');
+    form.set('size', 'auto');
+    form.set('output_format', 'png');
+    form.set('stream', 'true');
+    form.set('partial_images', '1');
+    form.append('image[]', makeImageFile(sourcePhoto, 'source-person.png'));
+    garmentImages.forEach((image, index) => {
+      if (image) form.append('image[]', makeImageFile(image, `garment-reference-${index + 1}.png`));
+    });
+
+    const upstream = await fetch(`${gatewayUrl}/images/edits`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+    });
+    if (!upstream.ok || !upstream.body) {
+      const upstreamText = await upstream.text().catch(() => '');
+      console.error(`Try-on image edit failed [${upstream.status}]: ${upstreamText.slice(0, 1200)}`);
+      let userMessage = 'The try-on image could not be created. Please try again.';
+      if (upstream.status === 402) userMessage = 'AI image credits are exhausted. Add credits to continue generating try-ons.';
+      else if (upstream.status === 429) userMessage = 'Try-on generation is busy right now. Please wait a moment and try again.';
+      else if (upstream.status === 400) userMessage = 'The uploaded photos could not be edited. Try a clear JPG or PNG photo.';
+      else if (upstream.status === 403) userMessage = 'Try-on image editing is temporarily unavailable for this workspace.';
+      return jsonError(userMessage, upstream.status >= 400 && upstream.status <= 599 ? upstream.status : 502);
     }
 
-    // Upload image
-    const uploadedImage = await uploadImage(supabase, user.id, resultB64, 'result');
+    const decoder = new TextDecoder();
+    const encoder = new TextEncoder();
+    const upstreamReader = upstream.body.getReader();
+    let eventBuffer = '';
+    let terminalError: string | null = null;
+    let gotCompletedEvent = false;
+    let errorEventSent = false;
 
-    const result: any = { success: true };
-    result.imageUrl = uploadedImage?.signedUrl || `data:image/jpeg;base64,${resultB64}`;
-    result.imagePath = uploadedImage?.path || null;
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const sendEvent = (name: string, data: unknown) => {
+          controller.enqueue(encoder.encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`));
+        };
+        const processEvent = async (eventBlock: string) => {
+          let eventName = '';
+          const dataLines: string[] = [];
+          for (const line of eventBlock.split(/\r?\n/)) {
+            if (line.startsWith('event:')) eventName = line.slice(6).trim();
+            if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
+          }
+          if (!dataLines.length) return;
 
-    return new Response(JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          let eventData: Record<string, unknown>;
+          try {
+            eventData = JSON.parse(dataLines.join('\n')) as Record<string, unknown>;
+          } catch {
+            return;
+          }
+          const eventType = eventName || (typeof eventData.type === 'string' ? eventData.type : '');
+          if (eventType === 'error' || eventData.type === 'error') {
+            const error = eventData.error;
+            terminalError = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+              ? error.message
+              : 'The try-on image could not be created. Please try again.';
+            return;
+          }
 
+          if (eventType !== 'image_edit.partial_image' && eventType !== 'image_edit.completed') return;
+          if (typeof eventData.b64_json !== 'string') {
+            terminalError = 'The try-on returned an incomplete image. Please try again.';
+            return;
+          }
+          const binary = atob(eventData.b64_json);
+          const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+          if (bytes.byteLength > 24 * 1024 * 1024) {
+            terminalError = 'The generated try-on is too large to save. Please try again.';
+            return;
+          }
+
+          if (eventType === 'image_edit.completed') {
+            gotCompletedEvent = true;
+            sendEvent('tryon.status', { phase: 'saving' });
+            try {
+              const saved = await createPrivateResult(supabase, user.id, bytes);
+              sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
+            } catch (error) {
+              terminalError = error instanceof Error ? error.message : 'The preview could not be saved securely.';
+            }
+            return;
+          }
+
+          sendEvent('tryon.preview', { imageUrl: `data:image/png;base64,${eventData.b64_json}` });
+        };
+
+        try {
+          while (true) {
+            const { done, value } = await upstreamReader.read();
+            if (done) break;
+            eventBuffer += decoder.decode(value, { stream: true });
+            const blocks = eventBuffer.split(/\r?\n\r?\n/);
+            eventBuffer = blocks.pop() ?? '';
+            for (const block of blocks) await processEvent(block);
+          }
+          eventBuffer += decoder.decode();
+          if (eventBuffer.trim()) await processEvent(eventBuffer);
+          if (terminalError) {
+            sendEvent('error', { error: { message: terminalError } });
+            errorEventSent = true;
+          } else if (!gotCompletedEvent) {
+            terminalError = 'The image editor ended before the try-on was complete. Please try again.';
+            sendEvent('error', { error: { message: terminalError } });
+            errorEventSent = true;
+          }
+        } catch (error) {
+          console.error('Try-on image stream failed:', error instanceof Error ? error.message : 'Unknown streaming error');
+          if (!errorEventSent) sendEvent('error', { error: { message: 'The try-on was interrupted before it finished. Please try again.' } });
+        } finally {
+          upstreamReader.releaseLock();
+          controller.close();
+        }
+      },
+      cancel() {
+        void upstreamReader.cancel().catch(() => {});
+      },
+    });
+
+    return new Response(stream, {
+      headers: { ...corsHeaders, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive' },
+    });
   } catch (error) {
-    console.error('Try-on error:', error);
-    return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const message = error instanceof Error ? error.message : 'Try-on generation failed. Please try again.';
+    console.error('Try-on generation failed:', message);
+    const status = message.includes('too large') ? 413 : 500;
+    return jsonError(status === 413 ? message : 'Try-on generation failed. Please try again.', status);
   }
 });

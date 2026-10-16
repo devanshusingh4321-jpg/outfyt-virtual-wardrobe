@@ -3,6 +3,7 @@ export type TryOnGarment = {
   brand?: string | null;
   category?: string | null;
   color?: string | null;
+  referenceIndex?: number | null;
   buttoned?: boolean;
   tucked?: boolean;
 };
@@ -14,7 +15,8 @@ export function buildTryOnPrompt(items: TryOnGarment[], size: string) {
       .filter((part): part is string => Boolean(part));
     const styling = [item.buttoned === true ? 'buttoned up' : item.buttoned === false ? 'worn open' : null, item.tucked === true ? 'tucked in' : item.tucked === false ? 'untucked' : null]
       .filter((part): part is string => Boolean(part));
-    return `${index + 1}. ${details.join(', ')}${styling.length ? `; styling: ${styling.join(', ')}` : ''}`;
+    const reference = item.referenceIndex ? `; match garment reference image ${item.referenceIndex}` : '; no garment photo reference supplied';
+    return `${index + 1}. ${details.join(', ')}${reference}${styling.length ? `; styling: ${styling.join(', ')}` : ''}`;
   }).join('\n');
 
   return `Make a photorealistic virtual clothing try-on by EDITING the first input photograph, not by creating a new photograph.

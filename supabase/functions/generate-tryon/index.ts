@@ -119,6 +119,7 @@ Deno.serve(async (request) => {
 
     const items: TryOnGarment[] = [];
     const garmentUrls: (string | null)[] = [];
+    let nextReferenceIndex = 1;
     for (const value of body.outfitItems) {
       if (!value || typeof value !== 'object' || !('name' in value)) return jsonError('One of the outfit items is not valid.', 400);
       const item = value as Record<string, unknown>;
@@ -129,11 +130,13 @@ Deno.serve(async (request) => {
       if (item.image_url !== null && item.image_url !== undefined && !isAllowedImageUrl(item.image_url)) {
         return jsonError('One of the outfit images is not a valid secure image link.', 400);
       }
+      const hasReference = typeof item.image_url === 'string';
       items.push({
         name,
         brand: safeText(item.brand, 80),
         category: category?.toLowerCase() ?? null,
         color: safeText(item.color, 60),
+        referenceIndex: hasReference ? nextReferenceIndex++ : null,
         ...(typeof item.buttoned === 'boolean' ? { buttoned: item.buttoned } : {}),
         ...(typeof item.tucked === 'boolean' ? { tucked: item.tucked } : {}),
       });

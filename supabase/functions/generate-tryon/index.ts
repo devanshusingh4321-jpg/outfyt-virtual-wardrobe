@@ -37,11 +37,12 @@ function isAllowedImageUrl(value: unknown): value is string {
   }
 }
 
-function isUserPhotoUrl(value: string, supabaseUrl: string) {
+function isUserPhotoUrl(value: string, supabaseUrl: string, userId: string) {
   try {
     const photo = new URL(value);
     const project = new URL(supabaseUrl);
-    return photo.origin === project.origin && photo.pathname.startsWith('/storage/v1/object/sign/tryon-photos/');
+    const objectPrefix = `/storage/v1/object/sign/tryon-photos/${userId}/`;
+    return photo.origin === project.origin && photo.pathname.startsWith(objectPrefix);
   } catch {
     return false;
   }
@@ -111,7 +112,7 @@ Deno.serve(async (request) => {
       return jsonError('A photo, outfit, and size are required.', 400);
     }
     const body = payload as { photoUrl: unknown; outfitItems: unknown; size: unknown };
-    if (!isAllowedImageUrl(body.photoUrl) || !isUserPhotoUrl(body.photoUrl, supabaseUrl)) return jsonError('Please upload a valid try-on photo.', 400);
+    if (!isAllowedImageUrl(body.photoUrl) || !isUserPhotoUrl(body.photoUrl, supabaseUrl, user.id)) return jsonError('Please upload a valid try-on photo.', 400);
     if (!Array.isArray(body.outfitItems) || body.outfitItems.length < 1 || body.outfitItems.length > 8) {
       return jsonError('Choose an outfit with between one and eight items.', 400);
     }

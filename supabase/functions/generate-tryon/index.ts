@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders as supabaseCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { buildTryOnPrompt, type TryOnGarment } from './prompt.ts';
 
 const corsHeaders = {
   ...supabaseCorsHeaders,
@@ -13,16 +14,6 @@ const imageModel = 'openai/gpt-image-2.5-sunburst';
 const allowedSizes = new Set(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
 const allowedCategories = new Set(['topwear', 'bottomwear', 'outerwear', 'footwear', 'accessory']);
 const maxInputBytes = 12 * 1024 * 1024;
-
-type OutfitItem = {
-  name: string;
-  brand?: string | null;
-  image_url?: string | null;
-  category?: string | null;
-  color?: string | null;
-  buttoned?: boolean;
-  tucked?: boolean;
-};
 
 type PhotoAsset = { bytes: Uint8Array; mimeType: string };
 
@@ -41,6 +32,17 @@ function isAllowedImageUrl(value: unknown): value is string {
   try {
     const url = new URL(value);
     return url.protocol === 'https:' && url.username === '' && url.password === '';
+  } catch {
+    return false;
+  }
+}
+
+function isUserPhotoUrl(value: string, supabaseUrl: string, userId: string) {
+  try {
+    const photo = new URL(value);
+    const project = new URL(supabaseUrl);
+    const objectPrefix = `/storage/v1/object/sign/tryon-photos/${userId}/`;
+    return photo.origin === project.origin && photo.pathname.startsWith(objectPrefix);
   } catch {
     return false;
   }
@@ -80,36 +82,6 @@ async function createPrivateResult(supabase: ReturnType<typeof createClient>, us
   return { path, signedUrl: data.signedUrl };
 }
 
-function tryonPrompt(items: OutfitItem[], size: string) {
-  const fit = size === 'XS' || size === 'S' ? 'close-fitting, but anatomically natural' : size === 'L' || size === 'XL' || size === 'XXL' ? 'relaxed with natural ease' : 'regular true-to-size';
-  const descriptions = items.map((item, index) => {
-    const details = [item.brand, item.name, item.category ? `category: ${item.category}` : null, item.color ? `requested color: ${item.color}` : null]
-      .filter((part): part is string => Boolean(part));
-    const styling = [item.buttoned === true ? 'buttoned up' : item.buttoned === false ? 'worn open' : null, item.tucked === true ? 'tucked in' : item.tucked === false ? 'untucked' : null]
-      .filter((part): part is string => Boolean(part));
-    return `${index + 1}. ${details.join(', ')}${styling.length ? `; styling: ${styling.join(', ')}` : ''}`;
-  }).join('\n');
-
-  return `Make a photorealistic virtual clothing try-on by EDITING the first input photograph, not by creating a new photograph.
-
-IMAGE ROLES AND ORDER
-- Image 1 is the source photograph of the person. It is the immutable base image and must remain the same person in the same photograph.
-- Each following image, in order, is a garment reference for its correspondingly numbered outfit item below. Reference photos show clothing only; do not copy their model, face, body, pose, lighting, crop, or background.
-
-ONLY PERMITTED CHANGE
-Replace only the visible clothing worn by the person with these requested items. Use the garment references to faithfully match each item's design, color, pattern, material, collar, sleeves, length, and visible construction. Apply natural fabric folds, occlusion, and lighting consistent with the original source. Target fit: ${fit} (${size}). Respect only the listed styling settings.
-
-LOCK THE SOURCE PHOTOGRAPH
-Preserve every pixel outside the clothing edit as closely as possible. Do not retouch, regenerate, beautify, reinterpret, or restyle the person. Keep the exact face and identity: facial geometry, eyes, eyebrows, nose, lips, teeth, ears, skin texture, expression, makeup, and age. Keep hair and hairline, skin tone, body shape and proportions, hands and fingers, pose, gaze, accessories not covered by the new clothes, and all visible anatomy unchanged. Keep the original camera angle, framing, crop, perspective, focus, lighting, color grade, and every background object exactly as they are.
-
-Do not change facial features or any non-clothing element. Do not add objects, people, jewelry, text, logos, or new accessories. Do not crop, expand, mirror, or change the aspect ratio. If a garment is difficult to render, keep the source photograph unchanged in that region rather than modifying the face, body, or background.
-
-OUTFIT TO APPLY
-${descriptions}
-
-Return one high-quality photorealistic edit of the original source photo. The result should be indistinguishable from the input outside the garment areas.`;
-}
-
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return jsonError('Method not allowed.', 405);
@@ -140,13 +112,15 @@ Deno.serve(async (request) => {
       return jsonError('A photo, outfit, and size are required.', 400);
     }
     const body = payload as { photoUrl: unknown; outfitItems: unknown; size: unknown };
-    if (!isAllowedImageUrl(body.photoUrl)) return jsonError('Please upload a valid try-on photo.', 400);
+    if (!isAllowedImageUrl(body.photoUrl) || !isUserPhotoUrl(body.photoUrl, supabaseUrl, user.id)) return jsonError('Please upload a valid try-on photo.', 400);
     if (!Array.isArray(body.outfitItems) || body.outfitItems.length < 1 || body.outfitItems.length > 8) {
       return jsonError('Choose an outfit with between one and eight items.', 400);
     }
     if (typeof body.size !== 'string' || !allowedSizes.has(body.size)) return jsonError('Choose a valid size before generating your try-on.', 400);
 
-    const items: OutfitItem[] = [];
+    const items: TryOnGarment[] = [];
+    const garmentUrls: (string | null)[] = [];
+    let nextReferenceIndex = 1;
     for (const value of body.outfitItems) {
       if (!value || typeof value !== 'object' || !('name' in value)) return jsonError('One of the outfit items is not valid.', 400);
       const item = value as Record<string, unknown>;
@@ -157,27 +131,29 @@ Deno.serve(async (request) => {
       if (item.image_url !== null && item.image_url !== undefined && !isAllowedImageUrl(item.image_url)) {
         return jsonError('One of the outfit images is not a valid secure image link.', 400);
       }
+      const hasReference = typeof item.image_url === 'string';
       items.push({
         name,
         brand: safeText(item.brand, 80),
         category: category?.toLowerCase() ?? null,
         color: safeText(item.color, 60),
-        image_url: typeof item.image_url === 'string' ? item.image_url : null,
+        referenceIndex: hasReference ? nextReferenceIndex++ : null,
         ...(typeof item.buttoned === 'boolean' ? { buttoned: item.buttoned } : {}),
         ...(typeof item.tucked === 'boolean' ? { tucked: item.tucked } : {}),
       });
+      garmentUrls.push(typeof item.image_url === 'string' ? item.image_url : null);
     }
 
     const [sourcePhoto, garmentImages] = await Promise.all([
       fetchImage(body.photoUrl),
-      Promise.all(items.map((item) => item.image_url ? fetchImage(item.image_url, 4 * 1024 * 1024) : Promise.resolve(null))),
+      Promise.all(garmentUrls.map((url) => url ? fetchImage(url, 4 * 1024 * 1024) : Promise.resolve(null))),
     ]);
     const inputSize = sourcePhoto.bytes.byteLength + garmentImages.reduce((sum, image) => sum + (image?.bytes.byteLength ?? 0), 0);
     if (inputSize > maxInputBytes) return jsonError('The selected photos are too large. Choose smaller images and try again.', 413);
 
     const form = new FormData();
     form.set('model', imageModel);
-    form.set('prompt', tryonPrompt(items, body.size));
+    form.set('prompt', buildTryOnPrompt(items, body.size));
     form.set('quality', 'max');
     form.set('size', 'auto');
     form.set('output_format', 'png');
@@ -195,12 +171,22 @@ Deno.serve(async (request) => {
     });
     if (!upstream.ok || !upstream.body) {
       const upstreamText = await upstream.text().catch(() => '');
-      console.error(`Try-on image edit failed [${upstream.status}]: ${upstreamText.slice(0, 1200)}`);
+      let upstreamMessage: string | null = null;
+      try {
+        const errorBody = JSON.parse(upstreamText) as { message?: unknown; error?: { message?: unknown } };
+        upstreamMessage = safeText(errorBody.error?.message, 320) ?? safeText(errorBody.message, 320);
+      } catch {
+        upstreamMessage = null;
+      }
+      console.error(`Try-on image edit failed [${upstream.status}].`);
       let userMessage = 'The try-on image could not be created. Please try again.';
       if (upstream.status === 402) userMessage = 'AI image credits are exhausted. Add credits to continue generating try-ons.';
       else if (upstream.status === 429) userMessage = 'Try-on generation is busy right now. Please wait a moment and try again.';
       else if (upstream.status === 400) userMessage = 'The uploaded photos could not be edited. Try a clear JPG or PNG photo.';
-      else if (upstream.status === 403) userMessage = 'Try-on image editing is temporarily unavailable for this workspace.';
+      else if (upstream.status === 403) userMessage = upstreamMessage ?? 'Try-on image editing is not available for this workspace right now.';
+      else if (upstream.status === 401) userMessage = 'Try-on image editing is not configured correctly. Please contact the app owner.';
+      else if (upstream.status === 404) userMessage = 'The try-on image editor is temporarily unavailable.';
+      else if (upstream.status >= 500) userMessage = upstreamMessage ?? 'The try-on image editor had a temporary problem. Please try again later.';
       return jsonError(userMessage, upstream.status >= 400 && upstream.status <= 599 ? upstream.status : 502);
     }
 

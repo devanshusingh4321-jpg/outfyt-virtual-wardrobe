@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders as supabaseCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { editImage } from './gateway.ts';
 import { buildTryOnPrompt, type TryOnGarment } from './prompt.ts';
@@ -109,10 +109,10 @@ async function fetchImage(url: string, maxBytes = 8 * 1024 * 1024): Promise<Phot
 
 function makeImageFile(asset: PhotoAsset, filename: string): File {
   const extension = asset.mimeType === 'image/jpeg' ? 'jpg' : asset.mimeType === 'image/webp' ? 'webp' : 'png';
-  return new File([asset.bytes], `${filename}.${extension}`, { type: asset.mimeType });
+  return new File([asset.bytes.slice().buffer], `${filename}.${extension}`, { type: asset.mimeType });
 }
 
-async function createPrivateResult(supabase: ReturnType<typeof createClient>, userId: string, bytes: Uint8Array) {
+async function createPrivateResult(supabase: SupabaseClient<any, 'public', any, any, any>, userId: string, bytes: Uint8Array) {
   const path = `${userId}/tryon-result-${crypto.randomUUID()}.png`;
   const { error: uploadError } = await supabase.storage.from('tryon-photos').upload(path, bytes, {
     contentType: 'image/png',

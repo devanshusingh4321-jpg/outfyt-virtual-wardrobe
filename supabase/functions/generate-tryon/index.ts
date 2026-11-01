@@ -60,7 +60,18 @@ function isUserPhotoUrl(value: string, supabaseUrl: string, userId: string) {
 }
 
 async function fetchImage(url: string, maxBytes = 8 * 1024 * 1024): Promise<PhotoAsset> {
-  const response = await fetch(url, { redirect: 'error' });
+  let currentUrl = url;
+  let response: Response | null = null;
+  for (let attempt = 0; attempt <= 3; attempt++) {
+    response = await fetch(currentUrl, { redirect: 'manual' });
+    if (![301, 302, 303, 307, 308].includes(response.status)) break;
+    const location = response.headers.get('location');
+    if (!location || attempt === 3) throw new Error('An outfit or photo image could not be loaded. Please retry the upload.');
+    const nextUrl = new URL(location, currentUrl).toString();
+    if (!isAllowedImageUrl(nextUrl)) throw new Error('An image link redirected to an unsupported address.');
+    currentUrl = nextUrl;
+  }
+  if (!response) throw new Error('An outfit or photo image could not be loaded. Please retry the upload.');
   if (!response.ok) throw new Error('An outfit or photo image could not be loaded. Please retry the upload.');
   const mimeType = (response.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
@@ -68,8 +79,31 @@ async function fetchImage(url: string, maxBytes = 8 * 1024 * 1024): Promise<Phot
   }
   const declaredSize = Number(response.headers.get('content-length') || 0);
   if (declaredSize > maxBytes) throw new Error('An image is too large to use for this try-on.');
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength === 0 || bytes.byteLength > maxBytes) throw new Error('An image is empty or too large to use for this try-on.');
+  if (!response.body) throw new Error('An outfit or photo image could not be loaded. Please retry the upload.');
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        throw new Error('An image is too large to use for this try-on.');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  if (totalBytes === 0) throw new Error('An image is empty or too large to use for this try-on.');
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   return { bytes, mimeType };
 }
 

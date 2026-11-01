@@ -164,6 +164,10 @@ const TryOn = () => {
 
   const generateOverlay = async () => {
     if (!photo || !selectedOutfit) return;
+    if (!selectedOutfit.items.some((item) => item.image_url)) {
+      toast({ title: "Add a clothing photo first", description: "This outfit needs at least one clothing image to create a try-on.", variant: "destructive" });
+      return;
+    }
     setGenerating(true);
     setShowOverlay(false);
     setCompositeUrl(null);

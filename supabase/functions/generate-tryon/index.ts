@@ -1,5 +1,6 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders as supabaseCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { editImage } from './gateway.ts';
 import { buildTryOnPrompt, type TryOnGarment } from './prompt.ts';
 
 const corsHeaders = {
@@ -9,8 +10,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
-const gatewayUrl = 'https://ai.gateway.lovable.dev/v1';
-const imageModel = 'openai/gpt-image-2.5-sunburst';
 const allowedSizes = new Set(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
 const allowedCategories = new Set(['topwear', 'bottomwear', 'outerwear', 'footwear', 'accessory']);
 const maxInputBytes = 12 * 1024 * 1024;
@@ -31,7 +30,19 @@ function isAllowedImageUrl(value: unknown): value is string {
   if (typeof value !== 'string' || value.length > 4096) return false;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.username === '' && url.password === '';
+    const hostname = url.hostname.toLowerCase();
+    const isIpv4Literal = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+    const isLocalHostname = hostname === 'localhost'
+      || hostname.endsWith('.localhost')
+      || hostname.endsWith('.local')
+      || hostname.endsWith('.internal')
+      || hostname.endsWith('.test');
+    return url.protocol === 'https:'
+      && url.username === ''
+      && url.password === ''
+      && !hostname.startsWith('[')
+      && !isIpv4Literal
+      && !isLocalHostname;
   } catch {
     return false;
   }
@@ -49,7 +60,18 @@ function isUserPhotoUrl(value: string, supabaseUrl: string, userId: string) {
 }
 
 async function fetchImage(url: string, maxBytes = 8 * 1024 * 1024): Promise<PhotoAsset> {
-  const response = await fetch(url, { redirect: 'error' });
+  let currentUrl = url;
+  let response: Response | null = null;
+  for (let attempt = 0; attempt <= 3; attempt++) {
+    response = await fetch(currentUrl, { redirect: 'manual' });
+    if (![301, 302, 303, 307, 308].includes(response.status)) break;
+    const location = response.headers.get('location');
+    if (!location || attempt === 3) throw new Error('An outfit or photo image could not be loaded. Please retry the upload.');
+    const nextUrl = new URL(location, currentUrl).toString();
+    if (!isAllowedImageUrl(nextUrl)) throw new Error('An image link redirected to an unsupported address.');
+    currentUrl = nextUrl;
+  }
+  if (!response) throw new Error('An outfit or photo image could not be loaded. Please retry the upload.');
   if (!response.ok) throw new Error('An outfit or photo image could not be loaded. Please retry the upload.');
   const mimeType = (response.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
@@ -57,16 +79,40 @@ async function fetchImage(url: string, maxBytes = 8 * 1024 * 1024): Promise<Phot
   }
   const declaredSize = Number(response.headers.get('content-length') || 0);
   if (declaredSize > maxBytes) throw new Error('An image is too large to use for this try-on.');
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength === 0 || bytes.byteLength > maxBytes) throw new Error('An image is empty or too large to use for this try-on.');
+  if (!response.body) throw new Error('An outfit or photo image could not be loaded. Please retry the upload.');
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        throw new Error('An image is too large to use for this try-on.');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  if (totalBytes === 0) throw new Error('An image is empty or too large to use for this try-on.');
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   return { bytes, mimeType };
 }
 
 function makeImageFile(asset: PhotoAsset, filename: string): File {
-  return new File([asset.bytes], filename, { type: asset.mimeType });
+  const extension = asset.mimeType === 'image/jpeg' ? 'jpg' : asset.mimeType === 'image/webp' ? 'webp' : 'png';
+  return new File([asset.bytes.slice().buffer], `${filename}.${extension}`, { type: asset.mimeType });
 }
 
-async function createPrivateResult(supabase: ReturnType<typeof createClient>, userId: string, bytes: Uint8Array) {
+async function createPrivateResult(supabase: SupabaseClient<any, 'public', any, any, any>, userId: string, bytes: Uint8Array) {
   const path = `${userId}/tryon-result-${crypto.randomUUID()}.png`;
   const { error: uploadError } = await supabase.storage.from('tryon-photos').upload(path, bytes, {
     contentType: 'image/png',
@@ -152,23 +198,18 @@ Deno.serve(async (request) => {
     if (inputSize > maxInputBytes) return jsonError('The selected photos are too large. Choose smaller images and try again.', 413);
 
     const form = new FormData();
-    form.set('model', imageModel);
     form.set('prompt', buildTryOnPrompt(items, body.size));
     form.set('quality', 'max');
     form.set('size', 'auto');
     form.set('output_format', 'png');
     form.set('stream', 'true');
     form.set('partial_images', '1');
-    form.append('image[]', makeImageFile(sourcePhoto, 'source-person.png'));
+    form.append('image[]', makeImageFile(sourcePhoto, 'source-person'));
     garmentImages.forEach((image, index) => {
-      if (image) form.append('image[]', makeImageFile(image, `garment-reference-${index + 1}.png`));
+      if (image) form.append('image[]', makeImageFile(image, `garment-reference-${index + 1}`));
     });
 
-    const upstream = await fetch(`${gatewayUrl}/images/edits`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: form,
-    });
+    const upstream = await editImage(apiKey, form);
     if (!upstream.ok || !upstream.body) {
       const upstreamText = await upstream.text().catch(() => '');
       let upstreamMessage: string | null = null;
@@ -180,7 +221,7 @@ Deno.serve(async (request) => {
       }
       console.error(`Try-on image edit failed [${upstream.status}].`);
       let userMessage = 'The try-on image could not be created. Please try again.';
-      if (upstream.status === 402) userMessage = 'AI image credits are exhausted. Add credits to continue generating try-ons.';
+      if (upstream.status === 402) userMessage = upstreamMessage ?? 'AI image credits are exhausted. Add credits to continue generating try-ons.';
       else if (upstream.status === 429) userMessage = 'Try-on generation is busy right now. Please wait a moment and try again.';
       else if (upstream.status === 400) userMessage = 'The uploaded photos could not be edited. Try a clear JPG or PNG photo.';
       else if (upstream.status === 403) userMessage = upstreamMessage ?? 'Try-on image editing is not available for this workspace right now.';
@@ -196,6 +237,7 @@ Deno.serve(async (request) => {
     let eventBuffer = '';
     let terminalError: string | null = null;
     let gotCompletedEvent = false;
+    let receivedImageEvent = false;
     let errorEventSent = false;
 
     const stream = new ReadableStream<Uint8Array>({
@@ -222,12 +264,13 @@ Deno.serve(async (request) => {
           if (eventType === 'error' || eventData.type === 'error') {
             const error = eventData.error;
             terminalError = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
-              ? error.message
+              ? safeText(error.message, 500) ?? 'The try-on image could not be created. Please try again.'
               : 'The try-on image could not be created. Please try again.';
             return;
           }
 
           if (eventType !== 'image_edit.partial_image' && eventType !== 'image_edit.completed') return;
+          receivedImageEvent = true;
           if (typeof eventData.b64_json !== 'string') {
             terminalError = 'The try-on returned an incomplete image. Please try again.';
             return;
@@ -256,12 +299,17 @@ Deno.serve(async (request) => {
 
         try {
           while (true) {
-            const { done, value } = await upstreamReader.read();
-            if (done) break;
-            eventBuffer += decoder.decode(value, { stream: true });
-            const blocks = eventBuffer.split(/\r?\n\r?\n/);
-            eventBuffer = blocks.pop() ?? '';
-            for (const block of blocks) await processEvent(block);
+            try {
+              const { done, value } = await upstreamReader.read();
+              if (done) break;
+              eventBuffer += decoder.decode(value, { stream: true });
+              const blocks = eventBuffer.split(/\r?\n\r?\n/);
+              eventBuffer = blocks.pop() ?? '';
+              for (const block of blocks) await processEvent(block);
+            } catch (error) {
+              if (!receivedImageEvent && !terminalError) break;
+              throw error;
+            }
           }
           eventBuffer += decoder.decode();
           if (eventBuffer.trim()) await processEvent(eventBuffer);
@@ -269,13 +317,54 @@ Deno.serve(async (request) => {
             sendEvent('error', { error: { message: terminalError } });
             errorEventSent = true;
           } else if (!gotCompletedEvent) {
-            terminalError = 'The image editor ended before the try-on was complete. Please try again.';
-            sendEvent('error', { error: { message: terminalError } });
-            errorEventSent = true;
+            if (!receivedImageEvent) {
+              const replayForm = new FormData();
+              form.forEach((value, key) => replayForm.append(key, value));
+              replayForm.set('stream', 'false');
+              replayForm.delete('partial_images');
+              const replayResponse = await editImage(apiKey, replayForm);
+              if (!replayResponse.ok) {
+                const replayText = await replayResponse.text().catch(() => '');
+                let message = 'The try-on image could not be created. Please try again.';
+                try {
+                  const parsedError = JSON.parse(replayText) as { error?: { message?: unknown }; message?: unknown };
+                  message = safeText(parsedError.error?.message, 500) ?? safeText(parsedError.message, 500) ?? message;
+                } catch {
+                  message = `The try-on image could not be created (error ${replayResponse.status}). Please try again.`;
+                }
+                console.error(`Try-on image edit fallback failed [${replayResponse.status}].`);
+                sendEvent('error', { error: { message } });
+                errorEventSent = true;
+              } else {
+                const replayData = await replayResponse.json() as { data?: Array<{ b64_json?: unknown }> };
+                const finalBase64 = replayData.data?.[0]?.b64_json;
+                if (typeof finalBase64 !== 'string') {
+                  sendEvent('error', { error: { message: 'The image editor returned no finished try-on. Please try again.' } });
+                  errorEventSent = true;
+                } else {
+                  const binary = atob(finalBase64);
+                  const finalBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+                  if (finalBytes.byteLength > 24 * 1024 * 1024) {
+                    sendEvent('error', { error: { message: 'The generated try-on is too large to save. Please try again.' } });
+                    errorEventSent = true;
+                  } else {
+                    sendEvent('tryon.status', { phase: 'saving' });
+                    const saved = await createPrivateResult(supabase, user.id, finalBytes);
+                    sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
+                  }
+                }
+              }
+            } else {
+              sendEvent('error', { error: { message: 'The image editor ended before the try-on was complete. Please try again.' } });
+              errorEventSent = true;
+            }
           }
         } catch (error) {
           console.error('Try-on image stream failed:', error instanceof Error ? error.message : 'Unknown streaming error');
-          if (!errorEventSent) sendEvent('error', { error: { message: 'The try-on was interrupted before it finished. Please try again.' } });
+          if (!errorEventSent) {
+            const message = terminalError ?? 'The try-on was interrupted before it finished. Please try again.';
+            sendEvent('error', { error: { message } });
+          }
         } finally {
           upstreamReader.releaseLock();
           controller.close();

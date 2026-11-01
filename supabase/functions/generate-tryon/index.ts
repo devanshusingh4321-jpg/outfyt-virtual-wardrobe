@@ -196,6 +196,7 @@ Deno.serve(async (request) => {
     let eventBuffer = '';
     let terminalError: string | null = null;
     let gotCompletedEvent = false;
+    let receivedImageEvent = false;
     let errorEventSent = false;
 
     const stream = new ReadableStream<Uint8Array>({
@@ -222,12 +223,13 @@ Deno.serve(async (request) => {
           if (eventType === 'error' || eventData.type === 'error') {
             const error = eventData.error;
             terminalError = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
-              ? error.message
+              ? safeText(error.message, 500) ?? 'The try-on image could not be created. Please try again.'
               : 'The try-on image could not be created. Please try again.';
             return;
           }
 
           if (eventType !== 'image_edit.partial_image' && eventType !== 'image_edit.completed') return;
+          receivedImageEvent = true;
           if (typeof eventData.b64_json !== 'string') {
             terminalError = 'The try-on returned an incomplete image. Please try again.';
             return;
@@ -256,12 +258,17 @@ Deno.serve(async (request) => {
 
         try {
           while (true) {
-            const { done, value } = await upstreamReader.read();
-            if (done) break;
-            eventBuffer += decoder.decode(value, { stream: true });
-            const blocks = eventBuffer.split(/\r?\n\r?\n/);
-            eventBuffer = blocks.pop() ?? '';
-            for (const block of blocks) await processEvent(block);
+            try {
+              const { done, value } = await upstreamReader.read();
+              if (done) break;
+              eventBuffer += decoder.decode(value, { stream: true });
+              const blocks = eventBuffer.split(/\r?\n\r?\n/);
+              eventBuffer = blocks.pop() ?? '';
+              for (const block of blocks) await processEvent(block);
+            } catch (error) {
+              if (!receivedImageEvent && !terminalError) break;
+              throw error;
+            }
           }
           eventBuffer += decoder.decode();
           if (eventBuffer.trim()) await processEvent(eventBuffer);
@@ -269,9 +276,51 @@ Deno.serve(async (request) => {
             sendEvent('error', { error: { message: terminalError } });
             errorEventSent = true;
           } else if (!gotCompletedEvent) {
-            terminalError = 'The image editor ended before the try-on was complete. Please try again.';
-            sendEvent('error', { error: { message: terminalError } });
-            errorEventSent = true;
+            if (!receivedImageEvent) {
+              const replayForm = new FormData();
+              form.forEach((value, key) => replayForm.append(key, value));
+              replayForm.set('stream', 'false');
+              replayForm.delete('partial_images');
+              const replayResponse = await fetch(`${gatewayUrl}/images/edits`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${apiKey}` },
+                body: replayForm,
+              });
+              if (!replayResponse.ok) {
+                const replayText = await replayResponse.text().catch(() => '');
+                let message = 'The try-on image could not be created. Please try again.';
+                try {
+                  const parsedError = JSON.parse(replayText) as { error?: { message?: unknown }; message?: unknown };
+                  message = safeText(parsedError.error?.message, 500) ?? safeText(parsedError.message, 500) ?? message;
+                } catch {
+                  message = `The try-on image could not be created (error ${replayResponse.status}). Please try again.`;
+                }
+                console.error(`Try-on image edit fallback failed [${replayResponse.status}].`);
+                sendEvent('error', { error: { message } });
+                errorEventSent = true;
+              } else {
+                const replayData = await replayResponse.json() as { data?: Array<{ b64_json?: unknown }> };
+                const finalBase64 = replayData.data?.[0]?.b64_json;
+                if (typeof finalBase64 !== 'string') {
+                  sendEvent('error', { error: { message: 'The image editor returned no finished try-on. Please try again.' } });
+                  errorEventSent = true;
+                } else {
+                  const binary = atob(finalBase64);
+                  const finalBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+                  if (finalBytes.byteLength > 24 * 1024 * 1024) {
+                    sendEvent('error', { error: { message: 'The generated try-on is too large to save. Please try again.' } });
+                    errorEventSent = true;
+                  } else {
+                    sendEvent('tryon.status', { phase: 'saving' });
+                    const saved = await createPrivateResult(supabase, user.id, finalBytes);
+                    sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
+                  }
+                }
+              }
+            } else {
+              sendEvent('error', { error: { message: 'The image editor ended before the try-on was complete. Please try again.' } });
+              errorEventSent = true;
+            }
           }
         } catch (error) {
           console.error('Try-on image stream failed:', error instanceof Error ? error.message : 'Unknown streaming error');

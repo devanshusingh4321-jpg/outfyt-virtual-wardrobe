@@ -31,7 +31,19 @@ function isAllowedImageUrl(value: unknown): value is string {
   if (typeof value !== 'string' || value.length > 4096) return false;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.username === '' && url.password === '';
+    const hostname = url.hostname.toLowerCase();
+    const isIpv4Literal = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+    const isLocalHostname = hostname === 'localhost'
+      || hostname.endsWith('.localhost')
+      || hostname.endsWith('.local')
+      || hostname.endsWith('.internal')
+      || hostname.endsWith('.test');
+    return url.protocol === 'https:'
+      && url.username === ''
+      && url.password === ''
+      && !hostname.startsWith('[')
+      && !isIpv4Literal
+      && !isLocalHostname;
   } catch {
     return false;
   }
@@ -63,7 +75,8 @@ async function fetchImage(url: string, maxBytes = 8 * 1024 * 1024): Promise<Phot
 }
 
 function makeImageFile(asset: PhotoAsset, filename: string): File {
-  return new File([asset.bytes], filename, { type: asset.mimeType });
+  const extension = asset.mimeType === 'image/jpeg' ? 'jpg' : asset.mimeType === 'image/webp' ? 'webp' : 'png';
+  return new File([asset.bytes], `${filename}.${extension}`, { type: asset.mimeType });
 }
 
 async function createPrivateResult(supabase: ReturnType<typeof createClient>, userId: string, bytes: Uint8Array) {
@@ -159,9 +172,9 @@ Deno.serve(async (request) => {
     form.set('output_format', 'png');
     form.set('stream', 'true');
     form.set('partial_images', '1');
-    form.append('image[]', makeImageFile(sourcePhoto, 'source-person.png'));
+    form.append('image[]', makeImageFile(sourcePhoto, 'source-person'));
     garmentImages.forEach((image, index) => {
-      if (image) form.append('image[]', makeImageFile(image, `garment-reference-${index + 1}.png`));
+      if (image) form.append('image[]', makeImageFile(image, `garment-reference-${index + 1}`));
     });
 
     const upstream = await fetch(`${gatewayUrl}/images/edits`, {
@@ -324,7 +337,10 @@ Deno.serve(async (request) => {
           }
         } catch (error) {
           console.error('Try-on image stream failed:', error instanceof Error ? error.message : 'Unknown streaming error');
-          if (!errorEventSent) sendEvent('error', { error: { message: 'The try-on was interrupted before it finished. Please try again.' } });
+          if (!errorEventSent) {
+            const message = terminalError ?? 'The try-on was interrupted before it finished. Please try again.';
+            sendEvent('error', { error: { message } });
+          }
         } finally {
           upstreamReader.releaseLock();
           controller.close();

@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders as supabaseCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { editImage } from './gateway.ts';
 import { buildTryOnPrompt, type TryOnGarment } from './prompt.ts';
 
 const corsHeaders = {
@@ -9,8 +10,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
-const gatewayUrl = 'https://ai.gateway.lovable.dev/v1';
-const imageModel = 'openai/gpt-image-2.5-sunburst';
 const allowedSizes = new Set(['XS', 'S', 'M', 'L', 'XL', 'XXL']);
 const allowedCategories = new Set(['topwear', 'bottomwear', 'outerwear', 'footwear', 'accessory']);
 const maxInputBytes = 12 * 1024 * 1024;
@@ -165,7 +164,6 @@ Deno.serve(async (request) => {
     if (inputSize > maxInputBytes) return jsonError('The selected photos are too large. Choose smaller images and try again.', 413);
 
     const form = new FormData();
-    form.set('model', imageModel);
     form.set('prompt', buildTryOnPrompt(items, body.size));
     form.set('quality', 'max');
     form.set('size', 'auto');
@@ -177,11 +175,7 @@ Deno.serve(async (request) => {
       if (image) form.append('image[]', makeImageFile(image, `garment-reference-${index + 1}`));
     });
 
-    const upstream = await fetch(`${gatewayUrl}/images/edits`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: form,
-    });
+    const upstream = await editImage(apiKey, form);
     if (!upstream.ok || !upstream.body) {
       const upstreamText = await upstream.text().catch(() => '');
       let upstreamMessage: string | null = null;
@@ -193,7 +187,7 @@ Deno.serve(async (request) => {
       }
       console.error(`Try-on image edit failed [${upstream.status}].`);
       let userMessage = 'The try-on image could not be created. Please try again.';
-      if (upstream.status === 402) userMessage = 'AI image credits are exhausted. Add credits to continue generating try-ons.';
+      if (upstream.status === 402) userMessage = upstreamMessage ?? 'AI image credits are exhausted. Add credits to continue generating try-ons.';
       else if (upstream.status === 429) userMessage = 'Try-on generation is busy right now. Please wait a moment and try again.';
       else if (upstream.status === 400) userMessage = 'The uploaded photos could not be edited. Try a clear JPG or PNG photo.';
       else if (upstream.status === 403) userMessage = upstreamMessage ?? 'Try-on image editing is not available for this workspace right now.';
@@ -294,11 +288,7 @@ Deno.serve(async (request) => {
               form.forEach((value, key) => replayForm.append(key, value));
               replayForm.set('stream', 'false');
               replayForm.delete('partial_images');
-              const replayResponse = await fetch(`${gatewayUrl}/images/edits`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${apiKey}` },
-                body: replayForm,
-              });
+              const replayResponse = await editImage(apiKey, replayForm);
               if (!replayResponse.ok) {
                 const replayText = await replayResponse.text().catch(() => '');
                 let message = 'The try-on image could not be created. Please try again.';

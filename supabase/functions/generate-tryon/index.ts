@@ -231,21 +231,28 @@ Deno.serve(async (request) => {
         };
         let completed = false;
         try {
-          const generated = await createTryOnImageStream(editPayload);
-          for await (const event of generated) {
-            if (event.type === 'image_edit.partial_image') {
-              sendEvent('tryon.preview', { imageUrl: `data:image/png;base64,${event.b64_json}` });
-            } else if (event.type === 'image_edit.completed') {
-              completed = true;
-              sendEvent('tryon.status', { phase: 'saving' });
-              const binary = atob(event.b64_json);
-              const imageBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-              if (imageBytes.byteLength > 24 * 1024 * 1024) {
-                throw new Error('The generated try-on is too large to save. Please try again.');
+          for (let streamAttempt = 0; streamAttempt < 2 && !completed; streamAttempt++) {
+            let receivedImageEvent = false;
+            const generated = await createTryOnImageStream(editPayload);
+            for await (const event of generated) {
+              if (event.type === 'image_edit.partial_image') {
+                receivedImageEvent = true;
+                sendEvent('tryon.preview', { imageUrl: `data:image/png;base64,${event.b64_json}` });
+              } else if (event.type === 'image_edit.completed') {
+                receivedImageEvent = true;
+                completed = true;
+                sendEvent('tryon.status', { phase: 'saving' });
+                const binary = atob(event.b64_json);
+                const imageBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+                if (imageBytes.byteLength > 24 * 1024 * 1024) {
+                  throw new Error('The generated try-on is too large to save. Please try again.');
+                }
+                const saved = await createPrivateResult(supabase, user.id, imageBytes);
+                sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
               }
-              const saved = await createPrivateResult(supabase, user.id, imageBytes);
-              sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
             }
+            if (completed) break;
+            if (receivedImageEvent || streamAttempt > 0) break;
           }
           if (!completed) throw new Error('The image editor ended before the try-on was complete. Please try again.');
         } catch (error) {

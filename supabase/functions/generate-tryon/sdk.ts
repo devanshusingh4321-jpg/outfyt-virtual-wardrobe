@@ -1,3 +1,5 @@
+/// <reference path="./generated/models.d.ts" />
+
 import { editImageStream } from 'npm:@lovable.dev/ai-gateway';
 import type { ImageEditRequest } from 'npm:@lovable.dev/ai-gateway';
 

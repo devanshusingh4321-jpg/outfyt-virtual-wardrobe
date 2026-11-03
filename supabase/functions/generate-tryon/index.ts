@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders as supabaseCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-import { editImage } from './gateway.ts';
+import { createTryOnImageStream, TRYON_IMAGE_MODEL, type TryOnEditRequest } from './sdk.ts';
 import { buildTryOnPrompt, type TryOnGarment } from './prompt.ts';
 
 const corsHeaders = {
@@ -136,8 +136,7 @@ Deno.serve(async (request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!supabaseUrl || !serviceRoleKey || !apiKey) {
+    if (!supabaseUrl || !serviceRoleKey) {
       console.error('Try-on generation is missing required server configuration.');
       return jsonError('Try-on generation is not configured yet.', 503);
     }
@@ -209,169 +208,53 @@ Deno.serve(async (request) => {
       if (image) form.append('image[]', makeImageFile(image, `garment-reference-${index + 1}`));
     });
 
-    const upstream = await editImage(apiKey, form);
-    if (!upstream.ok || !upstream.body) {
-      const upstreamText = await upstream.text().catch(() => '');
-      let upstreamMessage: string | null = null;
-      try {
-        const errorBody = JSON.parse(upstreamText) as { message?: unknown; error?: { message?: unknown } };
-        upstreamMessage = safeText(errorBody.error?.message, 320) ?? safeText(errorBody.message, 320);
-      } catch {
-        upstreamMessage = null;
-      }
-      console.error(`Try-on image edit failed [${upstream.status}].`);
-      let userMessage = 'The try-on image could not be created. Please try again.';
-      if (upstream.status === 402) userMessage = upstreamMessage ?? 'AI image credits are exhausted. Add credits to continue generating try-ons.';
-      else if (upstream.status === 429) userMessage = 'Try-on generation is busy right now. Please wait a moment and try again.';
-      else if (upstream.status === 400) userMessage = 'The uploaded photos could not be edited. Try a clear JPG or PNG photo.';
-      else if (upstream.status === 403) userMessage = upstreamMessage ?? 'Try-on image editing is not available for this workspace right now.';
-      else if (upstream.status === 401) userMessage = 'Try-on image editing is not configured correctly. Please contact the app owner.';
-      else if (upstream.status === 404) userMessage = 'The try-on image editor is temporarily unavailable.';
-      else if (upstream.status >= 500) userMessage = upstreamMessage ?? 'The try-on image editor had a temporary problem. Please try again later.';
-      return jsonError(userMessage, upstream.status >= 400 && upstream.status <= 599 ? upstream.status : 502);
-    }
-
-    const decoder = new TextDecoder();
     const encoder = new TextEncoder();
-    const upstreamReader = upstream.body.getReader();
-    let eventBuffer = '';
-    let terminalError: string | null = null;
-    let gotCompletedEvent = false;
-    let receivedImageEvent = false;
-    let errorEventSent = false;
-
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         const sendEvent = (name: string, data: unknown) => {
           controller.enqueue(encoder.encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`));
         };
-        const processEvent = async (eventBlock: string) => {
-          let eventName = '';
-          const dataLines: string[] = [];
-          for (const line of eventBlock.split(/\r?\n/)) {
-            if (line.startsWith('event:')) eventName = line.slice(6).trim();
-            if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
-          }
-          if (!dataLines.length) return;
 
-          let eventData: Record<string, unknown>;
-          try {
-            eventData = JSON.parse(dataLines.join('\n')) as Record<string, unknown>;
-          } catch {
-            return;
-          }
-          const eventType = eventName || (typeof eventData.type === 'string' ? eventData.type : '');
-          if (eventType === 'error' || eventData.type === 'error') {
-            const error = eventData.error;
-            terminalError = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
-              ? safeText(error.message, 500) ?? 'The try-on image could not be created. Please try again.'
-              : 'The try-on image could not be created. Please try again.';
-            return;
-          }
-
-          if (eventType !== 'image_edit.partial_image' && eventType !== 'image_edit.completed') return;
-          receivedImageEvent = true;
-          if (typeof eventData.b64_json !== 'string') {
-            terminalError = 'The try-on returned an incomplete image. Please try again.';
-            return;
-          }
-          const binary = atob(eventData.b64_json);
-          const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-          if (bytes.byteLength > 24 * 1024 * 1024) {
-            terminalError = 'The generated try-on is too large to save. Please try again.';
-            return;
-          }
-
-          if (eventType === 'image_edit.completed') {
-            gotCompletedEvent = true;
-            sendEvent('tryon.status', { phase: 'saving' });
-            try {
-              const saved = await createPrivateResult(supabase, user.id, bytes);
-              sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
-            } catch (error) {
-              terminalError = error instanceof Error ? error.message : 'The preview could not be saved securely.';
-            }
-            return;
-          }
-
-          sendEvent('tryon.preview', { imageUrl: `data:image/png;base64,${eventData.b64_json}` });
+        const imageFiles = [...form.getAll('image[]')].filter((entry): entry is File => entry instanceof File);
+        if (imageFiles.length === 0) {
+          sendEvent('error', { error: { message: 'A clear photo is required to create a try-on.' } });
+          controller.close();
+          return;
+        }
+        const editPayload: Omit<TryOnEditRequest, 'model' | 'stream'> = {
+          prompt: String(form.get('prompt') ?? ''),
+          image: imageFiles,
+          quality: 'max',
+          size: 'auto',
+          output_format: 'png',
+          partial_images: 1,
         };
-
+        let completed = false;
         try {
-          while (true) {
-            try {
-              const { done, value } = await upstreamReader.read();
-              if (done) break;
-              eventBuffer += decoder.decode(value, { stream: true });
-              const blocks = eventBuffer.split(/\r?\n\r?\n/);
-              eventBuffer = blocks.pop() ?? '';
-              for (const block of blocks) await processEvent(block);
-            } catch (error) {
-              if (!receivedImageEvent && !terminalError) break;
-              throw error;
-            }
-          }
-          eventBuffer += decoder.decode();
-          if (eventBuffer.trim()) await processEvent(eventBuffer);
-          if (terminalError) {
-            sendEvent('error', { error: { message: terminalError } });
-            errorEventSent = true;
-          } else if (!gotCompletedEvent) {
-            if (!receivedImageEvent) {
-              const replayForm = new FormData();
-              form.forEach((value, key) => replayForm.append(key, value));
-              replayForm.set('stream', 'false');
-              replayForm.delete('partial_images');
-              const replayResponse = await editImage(apiKey, replayForm);
-              if (!replayResponse.ok) {
-                const replayText = await replayResponse.text().catch(() => '');
-                let message = 'The try-on image could not be created. Please try again.';
-                try {
-                  const parsedError = JSON.parse(replayText) as { error?: { message?: unknown }; message?: unknown };
-                  message = safeText(parsedError.error?.message, 500) ?? safeText(parsedError.message, 500) ?? message;
-                } catch {
-                  message = `The try-on image could not be created (error ${replayResponse.status}). Please try again.`;
-                }
-                console.error(`Try-on image edit fallback failed [${replayResponse.status}].`);
-                sendEvent('error', { error: { message } });
-                errorEventSent = true;
-              } else {
-                const replayData = await replayResponse.json() as { data?: Array<{ b64_json?: unknown }> };
-                const finalBase64 = replayData.data?.[0]?.b64_json;
-                if (typeof finalBase64 !== 'string') {
-                  sendEvent('error', { error: { message: 'The image editor returned no finished try-on. Please try again.' } });
-                  errorEventSent = true;
-                } else {
-                  const binary = atob(finalBase64);
-                  const finalBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-                  if (finalBytes.byteLength > 24 * 1024 * 1024) {
-                    sendEvent('error', { error: { message: 'The generated try-on is too large to save. Please try again.' } });
-                    errorEventSent = true;
-                  } else {
-                    sendEvent('tryon.status', { phase: 'saving' });
-                    const saved = await createPrivateResult(supabase, user.id, finalBytes);
-                    sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
-                  }
-                }
+          const generated = await createTryOnImageStream(editPayload);
+          for await (const event of generated) {
+            if (event.type === 'image_edit.partial_image') {
+              sendEvent('tryon.preview', { imageUrl: `data:image/png;base64,${event.b64_json}` });
+            } else if (event.type === 'image_edit.completed') {
+              completed = true;
+              sendEvent('tryon.status', { phase: 'saving' });
+              const binary = atob(event.b64_json);
+              const imageBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+              if (imageBytes.byteLength > 24 * 1024 * 1024) {
+                throw new Error('The generated try-on is too large to save. Please try again.');
               }
-            } else {
-              sendEvent('error', { error: { message: 'The image editor ended before the try-on was complete. Please try again.' } });
-              errorEventSent = true;
+              const saved = await createPrivateResult(supabase, user.id, imageBytes);
+              sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
             }
           }
+          if (!completed) throw new Error('The image editor ended before the try-on was complete. Please try again.');
         } catch (error) {
-          console.error('Try-on image stream failed:', error instanceof Error ? error.message : 'Unknown streaming error');
-          if (!errorEventSent) {
-            const message = terminalError ?? 'The try-on was interrupted before it finished. Please try again.';
-            sendEvent('error', { error: { message } });
-          }
+          const gatewayError = error instanceof Error ? error : new Error('Try-on generation failed. Please try again.');
+          console.error(`Try-on image edit failed [${'httpStatus' in gatewayError ? gatewayError.httpStatus : 'unknown'}]: ${gatewayError.message}`);
+          sendEvent('error', { error: { message: gatewayError.message } });
         } finally {
-          upstreamReader.releaseLock();
           controller.close();
         }
-      },
-      cancel() {
-        void upstreamReader.cancel().catch(() => {});
       },
     });
 

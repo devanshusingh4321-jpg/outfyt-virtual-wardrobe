@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders as supabaseCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-import { createTryOnImageStream, TRYON_IMAGE_MODEL, type TryOnEditRequest } from './sdk.ts';
+import { GatewayError } from 'npm:@lovable.dev/ai-gateway';
+import { gatewayFailureMessage, gatewayFailureResponse } from './errors.ts';
+import { assertImageEditModelAvailable, createTryOnImageStream, type TryOnEditRequest } from './sdk.ts';
 import { buildTryOnPrompt, type TryOnGarment } from './prompt.ts';
 
 const corsHeaders = {
@@ -196,6 +198,16 @@ Deno.serve(async (request) => {
     const inputSize = sourcePhoto.bytes.byteLength + garmentImages.reduce((sum, image) => sum + (image?.bytes.byteLength ?? 0), 0);
     if (inputSize > maxInputBytes) return jsonError('The selected photos are too large. Choose smaller images and try again.', 413);
 
+    try {
+      await assertImageEditModelAvailable();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not currently available')) {
+        return jsonError(error.message, 503);
+      }
+      console.error('Could not confirm the workspace image editor catalog.');
+      return jsonError('Try-on image editing is not available right now. Please try again later.', 503);
+    }
+
     const form = new FormData();
     form.set('prompt', buildTryOnPrompt(items, body.size));
     form.set('quality', 'max');
@@ -229,36 +241,62 @@ Deno.serve(async (request) => {
           output_format: 'png',
           partial_images: 1,
         };
+        let generated;
+        try {
+          generated = await createTryOnImageStream(editPayload);
+        } catch (error) {
+          if (error instanceof GatewayError) {
+            console.error('Try-on image edit was rejected before streaming.', {
+              code: error.code,
+              status: error.httpStatus,
+              outcome: error.outcome,
+              requestId: error.ids?.requestId,
+              logId: error.ids?.logId,
+              remoteType: error.remote?.type,
+              remoteCode: error.remote?.code,
+            });
+            controller.close();
+            return;
+          }
+          console.error('Try-on image edit could not start.');
+          controller.close();
+          return;
+        }
+
         let completed = false;
         try {
-          for (let streamAttempt = 0; streamAttempt < 2 && !completed; streamAttempt++) {
-            let receivedImageEvent = false;
-            const generated = await createTryOnImageStream(editPayload);
-            for await (const event of generated) {
-              if (event.type === 'image_edit.partial_image') {
-                receivedImageEvent = true;
-                sendEvent('tryon.preview', { imageUrl: `data:image/png;base64,${event.b64_json}` });
-              } else if (event.type === 'image_edit.completed') {
-                receivedImageEvent = true;
-                completed = true;
-                sendEvent('tryon.status', { phase: 'saving' });
-                const binary = atob(event.b64_json);
-                const imageBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-                if (imageBytes.byteLength > 24 * 1024 * 1024) {
-                  throw new Error('The generated try-on is too large to save. Please try again.');
-                }
-                const saved = await createPrivateResult(supabase, user.id, imageBytes);
-                sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
+          for await (const event of generated) {
+            if (event.type === 'image_edit.partial_image') {
+              sendEvent('tryon.preview', { imageUrl: `data:image/png;base64,${event.b64_json}` });
+            } else if (event.type === 'image_edit.completed') {
+              completed = true;
+              sendEvent('tryon.status', { phase: 'saving' });
+              const binary = atob(event.b64_json);
+              const imageBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+              if (imageBytes.byteLength > 24 * 1024 * 1024) {
+                throw new Error('The generated try-on is too large to save. Please try again.');
               }
+              const saved = await createPrivateResult(supabase, user.id, imageBytes);
+              sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
             }
-            if (completed) break;
-            if (receivedImageEvent || streamAttempt > 0) break;
           }
           if (!completed) throw new Error('The image editor ended before the try-on was complete. Please try again.');
         } catch (error) {
-          const gatewayError = error instanceof Error ? error : new Error('Try-on generation failed. Please try again.');
-          console.error(`Try-on image edit failed [${'httpStatus' in gatewayError ? gatewayError.httpStatus : 'unknown'}]: ${gatewayError.message}`);
-          sendEvent('error', { error: { message: gatewayError.message } });
+          if (error instanceof GatewayError) {
+            console.error('Try-on image stream failed.', {
+              code: error.code,
+              status: error.httpStatus,
+              outcome: error.outcome,
+              requestId: error.ids?.requestId,
+              logId: error.ids?.logId,
+              remoteType: error.remote?.type,
+              remoteCode: error.remote?.code,
+            });
+            sendEvent('error', { error: { message: gatewayFailureMessage(error) } });
+          } else {
+            console.error('Try-on image result could not be stored securely.');
+            sendEvent('error', { error: { message: error instanceof Error ? error.message : 'The try-on could not be saved securely. Please try again.' } });
+          }
         } finally {
           controller.close();
         }
@@ -269,6 +307,18 @@ Deno.serve(async (request) => {
       headers: { ...corsHeaders, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive' },
     });
   } catch (error) {
+    if (error instanceof GatewayError) {
+      console.error('Try-on image edit request failed before streaming.', {
+        code: error.code,
+        status: error.httpStatus,
+        outcome: error.outcome,
+        requestId: error.ids?.requestId,
+        logId: error.ids?.logId,
+        remoteType: error.remote?.type,
+        remoteCode: error.remote?.code,
+      });
+      return gatewayFailureResponse(error, jsonHeaders);
+    }
     const message = error instanceof Error ? error.message : 'Try-on generation failed. Please try again.';
     console.error('Try-on generation failed:', message);
     const status = message.includes('too large') ? 413 : 500;

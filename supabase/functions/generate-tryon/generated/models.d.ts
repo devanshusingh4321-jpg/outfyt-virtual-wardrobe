@@ -244,3 +244,11 @@ declare module "@lovable.dev/ai-gateway" {
     "openai/gpt-image-2.5-sunburst": ModelContract_22a58a07375a37a1.components["schemas"]["ImageEditEvent"];
   }
 }
+declare module "@lovable.dev/ai-gateway" {
+  interface ImageEditResponseByModel {
+    "openai/gpt-image-2.5-sunburst": ModelContract_22a58a07375a37a1.components["schemas"]["ImageEditResponse"];
+  }
+  interface ImageEditEventByModel {
+    "openai/gpt-image-2.5-sunburst": ModelContract_22a58a07375a37a1.components["schemas"]["ImageEditEvent"];
+  }
+}

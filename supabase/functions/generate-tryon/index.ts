@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders as supabaseCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-import { createTryOnImageStream, TRYON_IMAGE_MODEL, type TryOnEditRequest } from './sdk.ts';
+import { assertImageEditModelAvailable, createTryOnImageStream, type TryOnEditRequest } from './sdk.ts';
 import { buildTryOnPrompt, type TryOnGarment } from './prompt.ts';
 
 const corsHeaders = {
@@ -196,6 +196,16 @@ Deno.serve(async (request) => {
     const inputSize = sourcePhoto.bytes.byteLength + garmentImages.reduce((sum, image) => sum + (image?.bytes.byteLength ?? 0), 0);
     if (inputSize > maxInputBytes) return jsonError('The selected photos are too large. Choose smaller images and try again.', 413);
 
+    try {
+      await assertImageEditModelAvailable();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not currently available')) {
+        return jsonError(error.message, 503);
+      }
+      console.error('Could not confirm the workspace image editor catalog.');
+      return jsonError('Try-on image editing is not available right now. Please try again later.', 503);
+    }
+
     const form = new FormData();
     form.set('prompt', buildTryOnPrompt(items, body.size));
     form.set('quality', 'max');
@@ -231,25 +241,34 @@ Deno.serve(async (request) => {
         };
         let completed = false;
         try {
+          const imageFileParts = editPayload.image;
+          const imageFiles = Array.isArray(imageFileParts) ? imageFileParts : [imageFileParts];
           for (let streamAttempt = 0; streamAttempt < 2 && !completed; streamAttempt++) {
             let receivedImageEvent = false;
-            const generated = await createTryOnImageStream(editPayload);
-            for await (const event of generated) {
-              if (event.type === 'image_edit.partial_image') {
-                receivedImageEvent = true;
-                sendEvent('tryon.preview', { imageUrl: `data:image/png;base64,${event.b64_json}` });
-              } else if (event.type === 'image_edit.completed') {
-                receivedImageEvent = true;
-                completed = true;
-                sendEvent('tryon.status', { phase: 'saving' });
-                const binary = atob(event.b64_json);
-                const imageBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-                if (imageBytes.byteLength > 24 * 1024 * 1024) {
-                  throw new Error('The generated try-on is too large to save. Please try again.');
+            try {
+              const generated = await createTryOnImageStream(editPayload);
+              for await (const event of generated) {
+                if (event.type === 'image_edit.partial_image') {
+                  receivedImageEvent = true;
+                  sendEvent('tryon.preview', { imageUrl: `data:image/png;base64,${event.b64_json}` });
+                } else if (event.type === 'image_edit.completed') {
+                  receivedImageEvent = true;
+                  completed = true;
+                  sendEvent('tryon.status', { phase: 'saving' });
+                  const binary = atob(event.b64_json);
+                  const imageBytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+                  if (imageBytes.byteLength > 24 * 1024 * 1024) {
+                    throw new Error('The generated try-on is too large to save. Please try again.');
+                  }
+                  const saved = await createPrivateResult(supabase, user.id, imageBytes);
+                  sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
                 }
-                const saved = await createPrivateResult(supabase, user.id, imageBytes);
-                sendEvent('tryon.completed', { success: true, imageUrl: saved.signedUrl, imagePath: saved.path });
               }
+            } catch (error) {
+              const isGatewayError = error instanceof Error && 'httpStatus' in error;
+              const notStarted = isGatewayError && 'outcome' in error && error.outcome === 'not_started';
+              if (!notStarted || receivedImageEvent || streamAttempt > 0) throw error;
+              editPayload.image = imageFiles.map((file) => file.slice(0, file.size, file.type));
             }
             if (completed) break;
             if (receivedImageEvent || streamAttempt > 0) break;

@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { GatewayError, PaymentRequiredError, PermissionDeniedError, RequestRejectedError } from 'npm:@lovable.dev/ai-gateway';
+import { OperationFailedError, PaymentRequiredError, PermissionDeniedError, RequestRejectedError } from 'npm:@lovable.dev/ai-gateway';
 import { gatewayFailureMessage, gatewayFailureResponse } from './errors.ts';
 
 Deno.test('preserves the workspace credit recovery message and HTTP 402 status', async () => {
@@ -28,7 +28,7 @@ Deno.test('does not expose rejected request internals', async () => {
 });
 
 Deno.test('maps unknown errors to a safe gateway response', async () => {
-  const error = new GatewayError('UnknownGatewayError', { httpStatus: 502 }) as GatewayError;
+  const error = new OperationFailedError('server failure', { httpStatus: 502 });
   const response = gatewayFailureResponse(error, { 'Content-Type': 'application/json' });
   assertEquals(response.status, 502);
   assertEquals((await response.json()).error, 'The image editor could not finish the try-on. Please try again later.');

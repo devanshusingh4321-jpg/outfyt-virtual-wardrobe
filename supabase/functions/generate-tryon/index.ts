@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders as supabaseCorsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { GatewayError } from 'npm:@lovable.dev/ai-gateway';
 import { gatewayFailureMessage, gatewayFailureResponse } from './errors.ts';
-import { assertImageEditModelAvailable, createTryOnImageStream, type TryOnEditRequest } from './sdk.ts';
+import { createTryOnImageStream, type TryOnEditRequest } from './sdk.ts';
 import { buildTryOnPrompt, type TryOnGarment } from './prompt.ts';
 
 const corsHeaders = {
@@ -198,16 +198,6 @@ Deno.serve(async (request) => {
     const inputSize = sourcePhoto.bytes.byteLength + garmentImages.reduce((sum, image) => sum + (image?.bytes.byteLength ?? 0), 0);
     if (inputSize > maxInputBytes) return jsonError('The selected photos are too large. Choose smaller images and try again.', 413);
 
-    try {
-      await assertImageEditModelAvailable();
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('not currently available')) {
-        return jsonError(error.message, 503);
-      }
-      console.error('Could not confirm the workspace image editor catalog.');
-      return jsonError('Try-on image editing is not available right now. Please try again later.', 503);
-    }
-
     const form = new FormData();
     form.set('prompt', buildTryOnPrompt(items, body.size));
     form.set('quality', 'max');
@@ -221,48 +211,43 @@ Deno.serve(async (request) => {
     });
 
     const encoder = new TextEncoder();
+    const imageFiles = [...form.getAll('image[]')].filter((entry): entry is File => entry instanceof File);
+    if (imageFiles.length === 0) return jsonError('A clear photo is required to create a try-on.', 400);
+
+    const editPayload: Omit<TryOnEditRequest, 'model' | 'stream'> = {
+      prompt: String(form.get('prompt') ?? ''),
+      image: imageFiles,
+      quality: 'max',
+      size: 'auto',
+      output_format: 'png',
+      partial_images: 1,
+    };
+
+    let generated;
+    try {
+      generated = await createTryOnImageStream(editPayload);
+    } catch (error) {
+      if (error instanceof GatewayError) {
+        console.error('Try-on image edit request was rejected before streaming.', {
+          code: error.code,
+          status: error.httpStatus,
+          outcome: error.outcome,
+          requestId: error.ids?.requestId,
+          logId: error.ids?.logId,
+          remoteType: error.remote?.type,
+          remoteCode: error.remote?.code,
+        });
+        return gatewayFailureResponse(error, jsonHeaders);
+      }
+      console.error('Try-on image edit request could not start.');
+      return jsonError('The image editor could not start the try-on. Please try again later.', 502);
+    }
+
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         const sendEvent = (name: string, data: unknown) => {
           controller.enqueue(encoder.encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`));
         };
-
-        const imageFiles = [...form.getAll('image[]')].filter((entry): entry is File => entry instanceof File);
-        if (imageFiles.length === 0) {
-          sendEvent('error', { error: { message: 'A clear photo is required to create a try-on.' } });
-          controller.close();
-          return;
-        }
-        const editPayload: Omit<TryOnEditRequest, 'model' | 'stream'> = {
-          prompt: String(form.get('prompt') ?? ''),
-          image: imageFiles,
-          quality: 'max',
-          size: 'auto',
-          output_format: 'png',
-          partial_images: 1,
-        };
-        let generated;
-        try {
-          generated = await createTryOnImageStream(editPayload);
-        } catch (error) {
-          if (error instanceof GatewayError) {
-            console.error('Try-on image edit was rejected before streaming.', {
-              code: error.code,
-              status: error.httpStatus,
-              outcome: error.outcome,
-              requestId: error.ids?.requestId,
-              logId: error.ids?.logId,
-              remoteType: error.remote?.type,
-              remoteCode: error.remote?.code,
-            });
-            controller.close();
-            return;
-          }
-          console.error('Try-on image edit could not start.');
-          controller.close();
-          return;
-        }
-
         let completed = false;
         try {
           for await (const event of generated) {

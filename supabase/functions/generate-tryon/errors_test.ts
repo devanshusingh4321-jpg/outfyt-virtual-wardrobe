@@ -27,6 +27,17 @@ Deno.test('does not expose rejected request internals', async () => {
   assertEquals(gatewayFailureMessage(error), 'The uploaded images could not be edited. Please check the photo and clothing images and try again.');
 });
 
+Deno.test('explains moderation blocks without exposing provider internals', () => {
+  const error = new OperationFailedError('private provider response', {
+    httpStatus: 200,
+    remote: { type: 'image_generation_user_error', code: 'moderation_blocked' },
+  });
+  assertEquals(
+    gatewayFailureMessage(error),
+    'This outfit and photo combination was blocked by the image editor’s safety checks. Try a less revealing outfit or a fully clothed source photo. The app cannot override this restriction.',
+  );
+});
+
 Deno.test('maps unknown errors to a safe gateway response', async () => {
   const error = new OperationFailedError('server failure', { httpStatus: 502 });
   const response = gatewayFailureResponse(error, { 'Content-Type': 'application/json' });

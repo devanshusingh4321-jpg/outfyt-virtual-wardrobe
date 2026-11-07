@@ -6,6 +6,12 @@ function safeRecoveryMessage(error: GatewayError) {
   return recovery.slice(0, 240);
 }
 
+function isModerationBlocked(error: GatewayError) {
+  return error.remote?.code === 'moderation_blocked';
+}
+
+const moderationBlockedMessage = 'This outfit and photo combination was blocked by the image editor’s safety checks. Try a less revealing outfit or a fully clothed source photo. The app cannot override this restriction.';
+
 export function gatewayFailureResponse(error: GatewayError, headers: HeadersInit) {
   const status = error.httpStatus ?? 502;
   let message: string;
@@ -34,6 +40,7 @@ export function gatewayFailureResponse(error: GatewayError, headers: HeadersInit
 }
 
 export function gatewayFailureMessage(error: GatewayError) {
+  if (isModerationBlocked(error)) return moderationBlockedMessage;
   if (error.httpStatus === 402) {
     return safeRecoveryMessage(error) ?? 'AI image credits are exhausted. The workspace owner needs to add credits before generating try-ons.';
   }

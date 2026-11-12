@@ -1,5 +1,6 @@
 # Current roadmap
 
+- [ ] Prepare Capacitor iOS and Android projects for app-store release; owner developer accounts, signing, and submissions remain external steps.
 - [x] Improve virtual try-on identity preservation using a high-quality image-edit flow; retain a photo-first composition, garment references, and current private save flow.
 - [x] Add Razorpay-backed service checkout with INR amounts, per-customer payment history, and server-side verification.
 - [x] Add and deploy the `order.paid` webhook callback endpoint.
